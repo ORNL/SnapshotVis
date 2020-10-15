@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<html>
+  <head>
+    <!-- <script src="https://d3js.org/d3.v5.min.js"></script> -->
+    <script src="js/d3.min.js"></script>
+    <script src="js/d3-array.min.js"></script>
+    <script src="js/d3-delaunay.min.js"></script>
+    <script src="js/matrixChart.js"></script>
+
+    <style>
+      body {
+        font: 12px sans-serif;
+        /* margin: 4px 20px 0px 20px; */
+        /* background: gray; */
+        background-color: whitesmoke;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chart"></div>
+  </body>
+
+  <script>
+    let chartData;
+    let chart;
+    const margin = {top: 20, right: 20, bottom: 30, left: 20};
+    
+    const loadData = () => {
+      if (chartData) {
+        let links = chartData.map(d => {
+          return {
+            "source": d.node_1_id,
+            "target": d.node_2_id,
+            "value": d.count
+          }
+        });
+        let minValue = 0;
+        links = links.filter(d => (d.source.length > 0 && d.target.length > 0 && d.value > minValue));
+
+        let uniqueNodes = [...new Set(d3.merge([
+          new Set(links.map(d => d.source)),
+          new Set(links.map(d => d.target))
+        ]))];
+
+        let nodeMap = new Map();
+        chartData.map(d => {
+          if (uniqueNodes.includes(d.node_1_id)) {
+            nodeMap.set(d.node_1_id, {idx: d.node_1.idx, id: d.node_1.mesh_id, name: d.node_1.name, type: d.node_1.type});
+          }
+        });
+        let nodes = [...nodeMap.values()];
+        // console.log(nodes);
+
+        links = links.map(d => {
+          return {
+            source: nodes.findIndex(n => n.id === d.source),
+            target: nodes.findIndex(n => n.id === d.target),
+            value: d.value
+          }
+        });
+        links = links.slice(0, links.length / 2);
+        
+        return {
+          nodes: nodes,
+          links: links
+        };
+      }
+      return null;
+    };
+
+    const createChart = () => {
+      const data = loadData();
+      console.log(data);
+      if (data) {
+        d3.select('#chart').selectAll('*').remove();
+        const divWidth = document.getElementById('chart').clientWidth;
+        // document.getElementById('chart').style.height = `${height}px`;
+        
+        chart = matrixChart()
+          .width(divWidth)
+          .height(divWidth)
+          .margin(margin);
+        d3.select('#chart').call(chart, data);
+      }
+    }
+    
+    d3.json("/data/2005_input.json")
+      .then(data => {
+        console.log(data);
+        chartData = data;
+        createChart();
+      })
+      .catch(error => {
+        console.log(error)
+      });
+  </script>
+</html>
