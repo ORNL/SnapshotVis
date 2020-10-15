@@ -2,11 +2,10 @@
 <meta charset="utf-8" />
 <html>
   <head>
-    <!-- <script src="https://d3js.org/d3.v5.min.js"></script> -->
-    <script src="js/d3.min.js"></script>
-    <script src="js/d3-array.min.js"></script>
-    <script src="js/d3-delaunay.min.js"></script>
-    <script src="js/hierarchicalEdgeBundleChart.js"></script>
+    <script src="./js/d3.min.js"></script>
+    <script src="./js/d3-array.min.js"></script>
+    <script src="./js/d3-delaunay.min.js"></script>
+    <script src="./js/hierarchicalEdgeBundleChart.js"></script>
 
     <style>
       body {
@@ -28,19 +27,6 @@
     
     const loadData = () => {
       if (chartData) {
-        // let uniqueNodes = d3.merge([
-        //   new Set(chartData.map(d => d.node_1_id)), 
-        //   new Set(chartData.map(d => d.node_2_id))
-        // ]);
-        // console.log(uniqueNodes);
-        // let nodes = uniqueNodes.map(d => {
-        //   return { 
-        //     "id": d,
-        //     "group": 1
-        //   };
-        // });
-        // console.log(nodes);
-
         let links = chartData.map(d => {
           return {
             "source": d.node_1_id,
@@ -83,18 +69,6 @@
           links: links,
           nodeInfo: nodeInfo
         };
-
-        // let groupedLinks = d3.group(links, d => d.source, d => d.target);
-        // console.log(groupedLinks);
-        // groupedLinks.forEach((sval, skey) => {
-        //   // console.log(sval);
-        //   sval.forEach((tval, tkey) => {
-        //     if (tval.length > 1) {
-        //       console.log(tval.length);
-        //     }
-        //   });
-        // });
-
       }
       return null;
     };
@@ -106,7 +80,6 @@
         d3.select('#chart').selectAll('*').remove();
         const divWidth = document.getElementById('chart').clientWidth;
         // document.getElementById('chart').style.height = `${height}px`;
-
         
         chart = hierarchicalEdgeBundleChart()
           .width(divWidth)
