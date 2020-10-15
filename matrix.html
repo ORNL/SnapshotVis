@@ -12,11 +12,15 @@
         font: 12px sans-serif;
         /* margin: 4px 20px 0px 20px; */
         /* background: gray; */
-        background-color: whitesmoke;
+        background-color: white;
       }
     </style>
   </head>
   <body>
+    <p>
+      <label for="searchText">Type to Filter Nodes (comma separated list):&nbsp;&nbsp;</label>
+      <input id="searchText" type="text"></input><br/><br/>
+    </p>
     <div id="chart"></div>
   </body>
 
@@ -25,6 +29,14 @@
     let chart;
     const margin = {top: 20, right: 20, bottom: 30, left: 20};
     
+    document.getElementById('searchText')
+      .addEventListener('input', function() {
+        const textValue = document.getElementById('searchText').value;
+        let strings = d3.csvParseRows(textValue)[0];
+        // console.log(strings);
+        chart.setNameFilter
+      });
+
     const loadData = () => {
       if (chartData) {
         let links = chartData.map(d => {

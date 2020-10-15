@@ -6,7 +6,7 @@ var matrixChart = function() {
   let _chartDiv;
   let cellSize = 10;
   let level1Color = d3['schemeBlues'][9][8];
-  let level2Color = d3['schemeBlues'][9][3];
+  let level2Color = d3['schemeBlues'][9][4];
   // let level2Color = "steelblue";
   // let level1Color = "dodgerblue";
   let showLinkLines = false;
@@ -48,11 +48,13 @@ var matrixChart = function() {
         const g = svg.append('g')
           .attr('transform', `translate(${margin.left}, ${margin.top})`);    
 
-        g.append("rect")
-          .attr("width", width)
-          .attr("height", height)
-          .attr("stroke", "darkgray")
-          .attr("fill", "white");
+        // g.append("rect")
+        //   .attr("x", -1)
+        //   .attr("y", -1)
+        //   .attr("width", width + 2)
+        //   .attr("height", height + 2)
+        //   .attr("stroke", "darkgray")
+        //   .attr("fill", "white");
 
         const x = d3.scaleLinear()
           .domain([0, colCount])
