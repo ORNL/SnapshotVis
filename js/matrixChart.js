@@ -17,15 +17,15 @@ var matrixChart = function() {
     // console.log(d3['schemeBlues']);
     _chartDiv = selection;
 
-    _chartData = data.nodes.slice();
+    _chartData = data.slice();
 
-    let groupedLinks = d3.group(data.links, d => d.source);
-    // console.log(groupedLinks);
-    groupedLinks.forEach((value, key) => {
-      _chartData[key].links = value;
-    });
-    // _chartData.sort((a,b) => d3.descending(a.links ? a.links.length : 0, b.links ? b.links.length : 0));
-    console.log(_chartData);
+    // let groupedLinks = d3.group(data.links, d => d.source);
+    // // console.log(groupedLinks);
+    // groupedLinks.forEach((value, key) => {
+    //   _chartData[key].links = value;
+    // });
+    // // _chartData.sort((a,b) => d3.descending(a.links ? a.links.length : 0, b.links ? b.links.length : 0));
+    // console.log(_chartData);
 
     drawChart();
   }
@@ -156,7 +156,7 @@ var matrixChart = function() {
               // }
             // })
             .append("title")
-              .text(d => `id: ${d.id}\nname: ${d.name}\ntype: ${d.type}`);
+              .text(d => `ID: ${d.id}\nName: ${d.name}\nType: ${d.type}\nLink Count: ${d.links.length}`);
 
         function clearCell(d) {
           d3.select('.level1Links').selectAll('line').remove();
@@ -182,11 +182,41 @@ var matrixChart = function() {
         };
               
         function selectCell(d) {
+          // console.log(d);
+          // d.links.map(l => {
+          //   console.log(_chartData[l.target].id);
+          // })
           d3.select(`rect#${d.id}`)
-            .attr("stroke", "#444");
+            .attr("stroke", "#444")
+            .attr("stroke-width", 2);
           if (d.links) {
             d.links.map(l => {
               const L1Node = _chartData[l.target];
+              
+              // file level 2 nodes first (so level 1 connections can overwrite these)
+              if (L1Node.links) {
+                L1Node.links.map(l2 => {
+                  if (d.links.findIndex(x => x.target === l2.target) === -1) {
+                    const L2Node = _chartData[l2.target];
+                    if (L2Node !== d) {
+                      d3.select(`rect#${L2Node.id}`)
+                        .transition().duration(200)
+                        .attr("fill", level2Color);
+                      if (showLinkLines) {
+                        d3.select('.level2Links').append('line')
+                          .attr("x1", L1Node.x + cellSize / 2)
+                          .attr("y1", L1Node.y + cellSize / 2)
+                          .attr("x2", L2Node.x + cellSize / 2)
+                          .attr("y2", L2Node.y + cellSize / 2)
+                          .attr("pointer-events", "none");
+                      }
+                    }
+                  }
+                });
+              }
+              
+
+              // fill first level connected nodes last (so first levels aren't shown as level 2)
               d3.select(`rect#${L1Node.id}`)
                 .transition().duration(200)
                 .attr("fill", level1Color);
@@ -197,22 +227,6 @@ var matrixChart = function() {
                   .attr("x2", L1Node.x + cellSize / 2)
                   .attr("y2", L1Node.y + cellSize / 2)
                   .attr("pointer-events", "none");
-              }
-              if (L1Node.links) {
-                L1Node.links.map(l2 => {
-                  const L2Node = _chartData[l2.target];
-                  d3.select(`rect#${L2Node.id}`)
-                    .transition().duration(200)
-                    .attr("fill", level2Color);
-                  if (showLinkLines) {
-                    d3.select('.level2Links').append('line')
-                      .attr("x1", L1Node.x + cellSize / 2)
-                      .attr("y1", L1Node.y + cellSize / 2)
-                      .attr("x2", L2Node.x + cellSize / 2)
-                      .attr("y2", L2Node.y + cellSize / 2)
-                      .attr("pointer-events", "none");
-                  }
-                });
               }
             });
           }

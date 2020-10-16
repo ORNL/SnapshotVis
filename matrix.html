@@ -26,58 +26,69 @@
 
   <script>
     let chartData;
+    let nodes;
     let chart;
     const margin = {top: 20, right: 20, bottom: 30, left: 20};
-    
+    let nameFilterStrings = [];
+
     document.getElementById('searchText')
       .addEventListener('input', function() {
         const textValue = document.getElementById('searchText').value;
-        let strings = d3.csvParseRows(textValue)[0];
-        // console.log(strings);
-        
+        nameFilterStrings = textValue.length > 0 ? d3.csvParseRows(textValue)[0] : [];
+        console.log(nameFilterStrings);
+        createChart();
       });
 
-    const loadData = () => {
-      if (chartData) {
-        let links = chartData.map(d => {
-          return {
-            "source": d.node_1_id,
-            "target": d.node_2_id,
-            "value": d.count
-          }
-        });
-        let minValue = 0;
-        links = links.filter(d => (d.source.length > 0 && d.target.length > 0 && d.value > minValue));
+    // const loadData = () => {
+    //   if (chartData) {
+    //     let links = chartData.map(d => {
+    //       return {
+    //         "source": d.node_1_id,
+    //         "target": d.node_2_id,
+    //         "value": d.count
+    //       }
+    //     });
+    //     let minValue = 0;
+    //     links = links.filter(d => (d.source.length > 0 && d.target.length > 0 && d.value > minValue));
 
-        let uniqueNodes = [...new Set(d3.merge([
-          new Set(links.map(d => d.source)),
-          new Set(links.map(d => d.target))
-        ]))];
+    //     let uniqueNodes = [...new Set(d3.merge([
+    //       new Set(links.map(d => d.source)),
+    //       new Set(links.map(d => d.target))
+    //     ]))];
 
-        let nodeMap = new Map();
-        chartData.map(d => {
-          if (uniqueNodes.includes(d.node_1_id)) {
-            nodeMap.set(d.node_1_id, {idx: d.node_1.idx, id: d.node_1.mesh_id, name: d.node_1.name, type: d.node_1.type});
-          }
-        });
-        let nodes = [...nodeMap.values()];
-        // console.log(nodes);
+    //     let nodeMap = new Map();
+    //     chartData.map(d => {
+    //       if (uniqueNodes.includes(d.node_1_id)) {
+    //         nodeMap.set(d.node_1_id, {idx: d.node_1.idx, id: d.node_1.mesh_id, name: d.node_1.name, type: d.node_1.type});
+    //       }
+    //     });
+    //     let nodes = [...nodeMap.values()];
+    //     // console.log(nodes);
 
-        links = links.map(d => {
-          return {
-            source: nodes.findIndex(n => n.id === d.source),
-            target: nodes.findIndex(n => n.id === d.target),
-            value: d.value
-          }
-        });
-        links = links.slice(0, links.length / 2);
+    //     links = links.map(d => {
+    //       return {
+    //         source: nodes.findIndex(n => n.id === d.source),
+    //         target: nodes.findIndex(n => n.id === d.target),
+    //         value: d.value
+    //       }
+    //     });
+    //     links = links.slice(0, links.length / 2);
         
-        return {
-          nodes: nodes,
-          links: links
-        };
+    //     return {
+    //       nodes: nodes,
+    //       links: links
+    //     };
+    //   }
+    //   return null;
+    // };
+
+    const loadData = () => {
+      if (nodes) {
+        // filter nodes based on filter settings
+        return nodes;
+      } else {
+        return null;
       }
-      return null;
     };
 
     const createChart = () => {
@@ -94,12 +105,49 @@
           .margin(margin);
         d3.select('#chart').call(chart, data);
       }
+    };
+
+    const prepData = (data) => {
+      console.log(data.length);
+      data = data.filter(d => d.node_1_id.length > 0 && d.node_2_id.length > 0);
+      console.log(data.length);
+      
+      const groupedData = d3.group(data, d => d.node_1_id);
+      console.log(groupedData);
+
+      // console.log(groupedData.get("C0007450").get("C0027765"));
+      // console.log(groupedData.get("C0027765").get("C0007450"));
+
+      // make array of node info
+      nodes = [];
+      groupedData.forEach((v, k) => {
+        nodeInfo = v[0].node_1;
+        nodes.push({
+          id: nodeInfo.mesh_id,
+          name: nodeInfo.name,
+          type: nodeInfo.type
+        }); 
+      });
+      console.log(nodes);
+
+      // make links pointing to node indices
+      nodes.map(node => {
+        node.links = groupedData.get(node.id).map(d => {
+          return {
+            source: nodes.findIndex(t => t.id === d.node_1_id),
+            target: nodes.findIndex(t => t.id === d.node_2_id),
+            value: d.count
+          }
+        });
+      });
+      console.log(nodes);
     }
     
     d3.json("./data/2005_input.json")
       .then(data => {
         console.log(data);
-        chartData = data;
+        prepData(data);
+        // chartData = data;
         createChart();
       })
       .catch(error => {
