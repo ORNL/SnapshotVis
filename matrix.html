@@ -20,6 +20,9 @@
     <p>
       <label for="searchText">Type to Filter Nodes (comma separated list):&nbsp;&nbsp;</label>
       <input id="searchText" type="text"></input><br/><br/>
+
+      <label for="typeSelect">Type Filter:</label>
+      <select id="typeSelect"></select><br/>
     </p>
     <div id="chart"></div>
   </body>
@@ -85,16 +88,82 @@
     const loadData = () => {
       if (nodes) {
         // filter nodes based on filter settings
-        return nodes;
+        const typeSelect = document.getElementById('typeSelect');
+        const selectedType = typeSelect.options[typeSelect.selectedIndex].text;
+        console.log(`selected type is ${selectedType}`);
+
+        // filter nodes that are either of the selected type or are connected to a node of the selected type
+        if (selectedType === 'All') {
+          return nodes;
+        } else {
+          let filteredNodes = new Map();
+          nodes.forEach(node => {
+            if (node.type === selectedType) {
+              // console.log(node);
+              filteredNodes.set(node.id, node);
+              // add all nodes directly linked to current node 
+              node.links.map(link1 => {
+                // console.log(link1);
+                let L1Node = nodes.get(link1.target_id);
+                // console.log(L1Node);
+                filteredNodes.set(L1Node.id, L1Node);
+                // add all 2nd level linked nodes to the current node
+                L1Node.links.map(link2 => {
+                  // console.log('    ' + link2.target_id);
+                  let L2Node = nodes.get(link2.target_id);
+                  // console.log(L2Node);
+                  filteredNodes.set(L2Node.id, L2Node);
+                  L2Node.links.map(link3 => {
+                    let L3Node = nodes.get(link3.target_id);
+                    filteredNodes.set(L3Node.id, L3Node);
+                  });
+                });
+              });
+            }
+          });
+          return filteredNodes;
+        }
+          /*
+          filteredNodes = nodes.filter(node => {
+            if (node.type === selectedType) {
+              return true;
+            } else {
+              // search first level links for nodes of the selected type
+              let linkedToNodeOfType = false;
+              node.links.map(link1 => {
+                l1Node = nodes[link1.target];
+                if (l1Node.type === selectedType) {
+                  linkedToNodeOfType = true;
+                } else {
+                  // search second level linkes for nodes of the selected type
+                  l1Node.links.map(link2 => {
+                    l2Node = nodes[link2.target];
+                    if (l2Node.type === selectedType) {
+                      linkedToNodeOfType = true;
+                    }
+                  });
+                }
+              });
+              return linkedToNodeOfType;
+            }
+          });
+          
+        } else {
+          filteredNodes = nodes;
+         
+        }
+        */
+
+        // return filteredNodes;
       } else {
         return null;
       }
     };
 
     const createChart = () => {
-      const data = loadData();
-      console.log(data);
-      if (data) {
+      // const data = loadData();
+      // console.log(data);
+      if (nodes) {
         d3.select('#chart').selectAll('*').remove();
         const divWidth = document.getElementById('chart').clientWidth;
         // document.getElementById('chart').style.height = `${height}px`;
@@ -103,7 +172,7 @@
           .width(divWidth)
           .height(divWidth)
           .margin(margin);
-        d3.select('#chart').call(chart, data);
+        d3.select('#chart').call(chart, nodes);
       }
     };
 
@@ -119,33 +188,65 @@
       // console.log(groupedData.get("C0027765").get("C0007450"));
 
       // make array of node info
-      nodes = [];
+      nodes = new Map();
       groupedData.forEach((v, k) => {
         nodeInfo = v[0].node_1;
-        nodes.push({
+        nodes.set(nodeInfo.mesh_id, {
           id: nodeInfo.mesh_id,
           name: nodeInfo.name,
           type: nodeInfo.type
-        }); 
+        });
+        // nodes.push({
+        //   id: nodeInfo.mesh_id,
+        //   name: nodeInfo.name,
+        //   type: nodeInfo.type
+        // }); 
       });
       console.log(nodes);
 
-      // make links pointing to node indices
-      nodes.map(node => {
+      // make links using node ids
+      nodes.forEach(node => {
         node.links = groupedData.get(node.id).map(d => {
           return {
-            source: nodes.findIndex(t => t.id === d.node_1_id),
-            target: nodes.findIndex(t => t.id === d.node_2_id),
+            // source: nodes.findIndex(t => t.id === d.node_1_id),
+            // target: nodes.findIndex(t => t.id === d.node_2_id),
+            source_id: d.node_1_id,
+            target_id: d.node_2_id,
             value: d.count
           }
         });
       });
       console.log(nodes);
     }
+
+    function setHighlightedNodes() {
+      const typeSelect = document.getElementById('typeSelect')
+      const selectedType = typeSelect.options[typeSelect.selectedIndex].text;
+      if (selectedType === 'All') {
+        chart.setHighlightedNodes([]);
+      } else {
+        const highlightedNodes = [];
+        nodes.forEach(node => {
+          if (node.type === selectedType) {
+            highlightedNodes.push(node.id);
+          }
+        });
+        chart.highlightedNodes(highlightedNodes);
+      }
+    }
     
     d3.json("./data/2005_input.json")
       .then(data => {
         console.log(data);
+        
+        const typeOptions = [...new Set(data.map(d => d.node_1.type))].filter(d => d.length > 0).sort(d3.ascending);
+        const typeSelect = document.getElementById('typeSelect');
+        typeSelect.options[0] = new Option('All');
+        typeOptions.map(d => typeSelect.options[typeSelect.options.length] = new Option(d));
+        typeSelect.addEventListener('change', function() {
+          setHighlightedNodes();
+        });
+        
         prepData(data);
         // chartData = data;
         createChart();

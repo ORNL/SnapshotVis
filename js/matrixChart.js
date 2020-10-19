@@ -3,21 +3,29 @@ var matrixChart = function() {
   let width = 900 - margin.left - margin.right;
   let height = 400 - margin.top - margin.bottom;
   let _chartData;
+  let _nodes;
   let _chartDiv;
   let cellSize = 10;
-  let level1Color = d3['schemeBlues'][9][8];
+  let level1Color = d3['schemeBlues'][9][7];
   let level2Color = d3['schemeBlues'][9][4];
   // let level2Color = "steelblue";
   // let level1Color = "dodgerblue";
   let showLinkLines = false;
 
   let selectedCell = null;
+  let highlightedNodes = [];
+
+  let highlightColorScale;
+  let normalColorScale;
+  let svg;
+  let g;
 
   function chart(selection, data) {
     // console.log(d3['schemeBlues']);
     _chartDiv = selection;
 
-    _chartData = data.slice();
+    _chartData = data;
+    _nodes = [...data.values()];
 
     // let groupedLinks = d3.group(data.links, d => d.source);
     // // console.log(groupedLinks);
@@ -25,7 +33,8 @@ var matrixChart = function() {
     //   _chartData[key].links = value;
     // });
     // // _chartData.sort((a,b) => d3.descending(a.links ? a.links.length : 0, b.links ? b.links.length : 0));
-    // console.log(_chartData);
+    console.log(_chartData);
+    console.log(_nodes);
 
     drawChart();
   }
@@ -36,16 +45,16 @@ var matrixChart = function() {
 
       if (_chartData) {
         let colCount = Math.floor(width / cellSize);
-        let rowCount = Math.ceil(_chartData.length / colCount);
-        // console.log(`colCount = ${colCount}, rowCount = ${rowCount}`);
+        let rowCount = Math.ceil(_nodes.length / colCount);
+        console.log(`colCount = ${colCount}, rowCount = ${rowCount}`);
 
         height = rowCount * cellSize;
 
-        const svg = _chartDiv.append('svg')
+        svg = _chartDiv.append('svg')
           .attr('width', width + margin.left + margin.right)
           .attr('height', height + margin.top + margin.bottom);
 
-        const g = svg.append('g')
+        g = svg.append('g')
           .attr('transform', `translate(${margin.left}, ${margin.top})`);    
 
         // g.append("rect")
@@ -63,16 +72,18 @@ var matrixChart = function() {
           .domain([0, rowCount])
           .range([0,rowCount * cellSize]); 
 
-        let maxLinksLength = d3.max(_chartData, d => d.links ? d.links.length : 0);
+        // let maxLinksLength = d3.max(_chartData, d => d.links ? d.links.length : 0);
         // console.log(`maxLinksLength: ${maxLinksLength}`);
-        const color = d3.scaleSequentialSqrt([0, d3.max(_chartData, d => d.links ? d.links.length : 0)], t => d3.interpolateGreys((t * .5 + 0.15)));
+        normalColorScale = d3.scaleSequentialSqrt([0, d3.max(_nodes, d => d.links ? d.links.length : 0)], t => d3.interpolateGreys((t * .5 + 0.15)));
+        highlightColorScale = d3.scaleSequentialSqrt([0, d3.max(_nodes, d => d.links ? d.links.length : 0)], t => d3.interpolateReds((t * .5 + 0.15)));
 
         g.append('g')
           .selectAll('rect')
-          .data(_chartData)
+          .data(_nodes)
           .join('rect')
             .attr('id', d => `${d.id}`)
-            .attr('fill', d => d.links ? color(d.links.length) : "whitesmoke")
+            // .attr('fill', d => d.links ? color(d.links.length) : "whitesmoke")
+            .attr('fill', d => highlightedNodes.includes(d.id) ? highlightColorScale(d.links.length) : normalColorScale(d.links.length))
             .attr('y', (d,i) => {
               d.y = y(Math.floor(i / colCount));
               return d.y;
@@ -162,21 +173,36 @@ var matrixChart = function() {
           d3.select('.level1Links').selectAll('line').remove();
           d3.select('.level2Links').selectAll('line').remove();
           d3.select(`rect#${d.id}`)
-            .attr("stroke", null);
+            .attr('fill', d => highlightedNodes.includes(d.id) ? highlightColorScale(d.links.length) : normalColorScale(d.links.length))
+            .attr('stroke', d => highlightedNodes.includes(d.id) ? 'gray' : 'none')
+            .attr("stroke-width", 1);
+            // .attr("stroke", null);
           if (d.links) {
             d.links.map(l => {
-              const L1Node = _chartData[l.target];
+              // const L1Node = _chartData[l.target];
+              // const L1Node = _chartData[nodeIDIndexMap.get(l.target)];
+              const L1Node = _chartData.get(l.target_id);
               d3.select(`rect#${L1Node.id}`)
                 .transition().duration(200)
-                .attr("fill", L1Node.links ? color(L1Node.links.length) : "whitesmoke");
+                .attr('fill', d => highlightedNodes.includes(d.id) ? highlightColorScale(d.links.length) : normalColorScale(d.links.length))
+                .attr('stroke', d => highlightedNodes.includes(d.id) ? 'gray' : 'none')
+                .attr('stroke-width', 1);
+                // .attr("fill", L1Node.links ? color(L1Node.links.length) : "whitesmoke");
+              
               if (L1Node.links) {
                 L1Node.links.map(l2 => {
-                  const L2Node = _chartData[l2.target];
+                  // const L2Node = _chartData[l2.target];
+                  // const L2Node = _chartData[nodeIDIndexMap.get(l2.target)];
+                  const L2Node = _chartData.get(l2.target_id);
                   d3.select(`rect#${L2Node.id}`)
                     .transition().duration(200)
-                    .attr("fill", L2Node.links ? color(L2Node.links.length) : "whitesmoke");
-                })
+                    .attr('fill', d => highlightedNodes.includes(d.id) ? highlightColorScale(d.links.length) : normalColorScale(d.links.length))
+                    .attr('stroke', d => highlightedNodes.includes(d.id) ? 'gray' : 'none')
+                    // .attr("fill", L2Node.links ? color(L2Node.links.length) : "whitesmoke");
+                    .attr("stroke-width", 1);
+                });
               }
+              
             });
           }
         };
@@ -187,17 +213,21 @@ var matrixChart = function() {
           //   console.log(_chartData[l.target].id);
           // })
           d3.select(`rect#${d.id}`)
-            .attr("stroke", "#444")
+            .attr("stroke", "#000")
             .attr("stroke-width", 2);
           if (d.links) {
             d.links.map(l => {
-              const L1Node = _chartData[l.target];
+              // const L1Node = _chartData[l.target];
+              const L1Node = _chartData.get(l.target_id);
+              // if (!L1Node) console.log(l);
               
               // file level 2 nodes first (so level 1 connections can overwrite these)
               if (L1Node.links) {
                 L1Node.links.map(l2 => {
-                  if (d.links.findIndex(x => x.target === l2.target) === -1) {
-                    const L2Node = _chartData[l2.target];
+                  if (d.links.findIndex(x => x.target_id === l2.target_id) === -1) {
+                    // const L2Node = _chartData[l2.target];
+                    const L2Node = _chartData.get(l2.target_id);
+                    // if (!L2Node) console.log(l2);
                     if (L2Node !== d) {
                       d3.select(`rect#${L2Node.id}`)
                         .transition().duration(200)
@@ -214,7 +244,6 @@ var matrixChart = function() {
                   }
                 });
               }
-              
 
               // fill first level connected nodes last (so first levels aren't shown as level 2)
               d3.select(`rect#${L1Node.id}`)
@@ -277,6 +306,18 @@ var matrixChart = function() {
     drawChart();
     return chart;
   };
+
+  chart.highlightedNodes = function(value) {
+    if (!arguments.length) {
+      return highlightedNodes;
+    }
+    highlightedNodes = value;
+    g.selectAll('rect')
+      .attr('fill', d => highlightedNodes.includes(d.id) ? highlightColorScale(d.links.length) : normalColorScale(d.links.length))
+      .attr('stroke', d => highlightedNodes.includes(d.id) ? 'gray' : 'none');
+
+    return chart;
+  }
 
   return chart;
 }
