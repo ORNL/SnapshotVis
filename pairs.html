@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="./js/d3.min.js"></script>
+    <script src="./js/d3-array.min.js"></script>
+    <script src="./js/pairsMatrixChart.js"></script>
+
+    <style>
+      body {
+        font: 12px sans-serif;
+        /* margin: 4px 20px 0px 20px; */
+        /* background: gray; */
+        background-color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chart"></div>
+  </body>
+
+  <script>
+    let nodes;
+    let edges = null;
+    let chart;
+    const margin = {top: 20, right: 20, bottom: 20, left: 20};
+
+    const createChart = () => {
+      if (nodes) {
+        d3.select('#chart').selectAll('*').remove();
+        const chartWidth = document.getElementById('chart').clientWidth;
+
+        data = {
+          nodes: nodes,
+          edges: edges,
+        }
+        chart = matrixChart()
+          .width(chartWidth)
+          .height(1000)
+          .margin(margin);
+        d3.select('#chart').call(chart, data);
+      }
+    }
+
+    const prepData = (data) => {
+        let pathLengths = [];
+        nodes = new Map(Object.keys(data).map(k => {
+          // [k, data[k]]
+          data[k].paths = Object.values(data[k].paths);
+          data[k].paths.map(path => {
+            if (path.nodes[0] !== k) {
+              path.nodes.reverse();
+            }
+            pathLengths.push(path.nodes.length);
+          });
+          data[k].paths.sort((a,b) => d3.ascending(a.nodes.length, b.nodes.length));
+
+          /*
+          data[k].paths = new Map(Object.keys(data[k].paths).map(pk => [pk, data[k].paths[pk]]));
+          data[k].paths.forEach((path, k2) => {
+            if (path.nodes[0] !== k) {
+              path.nodes.reverse();
+            }
+            pathLengths.push(path.nodes.length);
+          });
+          */
+          // if (data[k].paths.size > 0) {
+
+          //   console.log(data[k].paths);
+          //   if (data[k].paths.nodes[0] !== k) {
+          //     data[k].paths.nodes.reverse();
+          //   }
+          // }
+          return [k, data[k]];
+        }));
+        // nodes.map(n => {
+        //   n.new_paths = [];
+        //   for (const [key, value] of Object.entries(n.paths)) {
+        //     n.new_paths.push({
+        //       mesh_id: key,
+        //       len: value.len,
+        //       nodes: value.nodes
+        //     });
+        //     // console.log(`${key}: ${value}`);
+        //   }
+        // });
+        console.log(nodes);
+        console.log(d3.extent(pathLengths));
+    }
+
+    d3.json("./data/2005/nodes.json")
+      .then(data => {
+        prepData(data);
+        createChart();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  </script>
+</html>
