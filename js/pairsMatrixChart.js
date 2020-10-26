@@ -19,14 +19,14 @@ var matrixChart = function() {
   let normalColorScale;
   let svg;
   let g;
+  let detailsSvg;
+  let detailsG;
 
   function chart(selection, data) {
     _chartDiv = selection;
 
     _nodes = data.nodes;
     _edges = data.edges;
-
-
 
     drawChart();
   }
@@ -68,11 +68,11 @@ var matrixChart = function() {
           .attr('width', width + margin.left + margin.right)
           .attr('height', height + margin.top + margin.bottom);
 
-        const detailsSvg = _chartDiv.append('svg')
-          .attr('width', width + margin.left + margin.right)
-          .attr('height', detailsHeight + margin.top + margin.bottom);
-        const detailsG = detailsSvg.append('g')
-          .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        // const detailsSvg = _chartDiv.append('svg')
+        //   .attr('width', width + margin.left + margin.right)
+        //   .attr('height', detailsHeight + margin.top + margin.bottom);
+        // const detailsG = detailsSvg.append('g')
+        //   .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
         g = svg.append('g')
           .attr('transform', `translate(${margin.left}, ${margin.top})`);    
@@ -141,16 +141,8 @@ var matrixChart = function() {
               }
             });
           });
-          // for (let path of d.paths.values()){
-          //   console.log(path);
-          //   path.nodes.map((n,i) => {
-          //     if (i !== 0) {
-          //       d3.select(`rect#${n}`)
-          //         .attr("stroke", "none");
-          //     }
-          //   });
-          // }
-          detailsG.selectAll('*').remove();
+          // detailsSVG.selectAll('*').remove();
+          detailsSvg.remove();
         };
               
         function selectCell(d) {
@@ -160,6 +152,83 @@ var matrixChart = function() {
             .attr("stroke-width", 2);
           
           console.log(d);
+
+          let pathHierarchy = {
+            name: d.mesh_id,
+            children: []
+          };
+          d.paths.map(path => {
+            currentNode = pathHierarchy;
+            path.nodes.map((node_id, i) => {
+              if (i > 0) {
+                childNode = currentNode.children.find(d => d.name === node_id);
+                if (!childNode) {
+                  childNode = {
+                      name: node_id,
+                      children: []
+                    };
+                  currentNode.children.push(childNode);
+                }
+                currentNode = childNode;
+              }
+            });
+          });
+
+          console.log(pathHierarchy);
+
+          const pathRoot = d3.hierarchy(pathHierarchy);
+          pathRoot.dx = 10;
+          pathRoot.dy = width / (pathRoot.height + 1);
+          let root = d3.tree().nodeSize([pathRoot.dx, pathRoot.dy])(pathRoot);
+
+          let x0 = Infinity;
+          let x1 = -x0;
+          root.each(d => {
+            if (d.x > x1) x1 = d.x;
+            if (d.x < x0) x0 = d.x;
+          });
+
+          detailsSvg = _chartDiv.append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', (x1- x0 + root.dx * 2) + margin.top + margin.bottom);
+
+          const detailsG = detailsSvg.append('g')
+            .attr("font-family", "sans-serif")
+            .attr("font-size", 10)
+            .attr('transform', `translate(${margin.left + (root.dy / 3)}, ${margin.top + (root.dx - x0)})`);
+
+          const link = detailsG.append("g")
+            .attr("fill", "none")
+            .attr("stroke", "#555")
+            .attr("stroke-opacity", 0.4)
+            .attr("stroke-width", 1.5)
+            .selectAll("path")
+              .data(root.links())
+              .join("path")
+                .attr("d", d3.linkHorizontal()
+                  .x(d => d.y)
+                  .y(d => d.x));
+
+          const node = detailsG.append("g")
+            .attr("stroke-linejoin", "round")
+            .attr("stroke-width", 3)
+            .selectAll("g")
+            .data(root.descendants())
+            .join("g")
+              .attr("transform", d =>  `translate(${d.y},${d.x})`);
+
+          node.append("circle")
+            .attr("fill", d => d.children ? "#555" : "#999")
+            .attr("r", 2.5);
+
+          node.append("text")
+            .attr("dy", "0.31em")
+            .attr("x", d => d.children ? -6 : 6)
+            .attr("text-anchor", d => d.children ? "end" : "start")
+            .text(d => nodes.get(d.data.name).name)
+          .clone(true).lower()
+            .attr("stroke", "white");
+          
           let endNodes = new Set();
           d.paths.map((path, pathIdx) => {
             d3.select('.pathLines')
@@ -172,9 +241,9 @@ var matrixChart = function() {
                   (path.nodes);
               });
             
-            const xOffset = pathIdx > maxNumPaths / 2 ? width/2 : 0;
-            const detailPath = detailsG.append('g')
-              .attr('transform', `translate(${xOffset}, ${pathIdx % (maxNumPaths / 2) * cellSize})`)
+            // const xOffset = pathIdx > maxNumPaths / 2 ? width/2 : 0;
+            // const detailPath = detailsG.append('g')
+            //   .attr('transform', `translate(${xOffset}, ${pathIdx % (maxNumPaths / 2) * cellSize})`)
             
             
             // console.log(`xOffset: ${xOffset}`);
@@ -199,10 +268,12 @@ var matrixChart = function() {
                 //   .attr('fill', 'black');
               }
             });
+
+            /*
             // console.log(_nodes);
-            console.log(path.nodes);
+            // console.log(path.nodes);
             let endNode = _nodes.get(path.nodes[path.nodes.length-1]);
-            console.log(endNode);
+            // console.log(endNode);
             detailPath.append('text')
               .attr('text-anchor', 'start')
               .attr('x', 0)
@@ -210,6 +281,7 @@ var matrixChart = function() {
               .attr('fill', 'black')
               .text(`${d.name} → (${path.nodes.length - 2}) → ${endNode.name}`);
             endNodes.add(path.nodes[path.nodes.length - 1]);
+            */
           });
           // for (let path of d.paths.values()){
           //   console.log(path);
