@@ -58,7 +58,7 @@ var matrixChart = function() {
           //   }
           // });
         });
-        console.log(`maxNumPaths: ${maxNumPaths},  maxNumPathNodes: ${maxNumPathNodes}`);
+        // console.log(`maxNumPaths: ${maxNumPaths},  maxNumPathNodes: ${maxNumPathNodes}`);
 
         const detailsHeight = Math.ceil(maxNumPaths / 2) * cellSize;
 
@@ -92,15 +92,14 @@ var matrixChart = function() {
         // normalColorScale = d3.scaleSequentialSqrt([0, d3.max(nodeValues, d => d.paths ? d.paths.length : 0)], t => d3.interpolateGreys((t * .5 + 0.15)));
         // highlightColorScale = d3.scaleSequentialSqrt([0, d3.max(nodeValues, d => d.paths ? d.paths.length : 0)], t => d3.interpolateReds((t * .5 + 0.15)));
         normalColorScale = d3.scaleSequentialSqrt([0, maxNumPaths], t => d3.interpolateGreys((t * .5 + 0.15)));
-        highlightColorScale = d3.scaleSequentialSqrt([0, maxNumPaths], t => d3.interpolateReds((t * .5 + 0.15)));
+        highlightColorScale = d3.scaleSequentialSqrt([0, maxNumPaths], t => d3.interpolateBlues((t * .5 + 0.15)));
 
         g.append('g')
           .selectAll('rect')
           .data(nodeValues)
           .join('rect')
             .attr('id', d => `${d.mesh_id}`)
-            .attr('fill', 'steelblue')
-            .attr('fill', d => highlightedNodes.includes(d.mesh_id) ? highlightColorScale(d.paths.length) : normalColorScale(d.paths.length))
+            .attr('fill', d => (highlightedNodes.length === 0 || highlightedNodes.includes(d.mesh_id)) ? highlightColorScale(d.paths.length) : normalColorScale(d.paths.length))
             .attr('y', (d,i) => {
               d.y = y(Math.floor(i / colCount));
               return d.y;
@@ -129,7 +128,7 @@ var matrixChart = function() {
         function clearCell(d) {
           d3.select('.pathLines').selectAll('*').remove();
           d3.select(`rect#${d.mesh_id}`)
-            .attr('fill', d => highlightedNodes.includes(d.mesh_id) ? highlightColorScale(d.paths.length) : normalColorScale(d.paths.length))
+            .attr('fill', d => (highlightedNodes.length === 0 || highlightedNodes.includes(d.mesh_id)) ? highlightColorScale(d.paths.length) : normalColorScale(d.paths.length))
             .attr('stroke', d => highlightedNodes.includes(d.mesh_id) ? 'gray' : 'none')
             .attr("stroke-width", 1);
 
@@ -235,7 +234,7 @@ var matrixChart = function() {
               .append('path')
               .attr('d', function(p) {
                 return d3.line()
-                  .curve(d3.curveLinear)
+                  .curve(d3.curveNatural)
                   .x(d => nodes.get(d).x)
                   .y(d => nodes.get(d).y)
                   (path.nodes);
@@ -317,6 +316,7 @@ var matrixChart = function() {
 
         g.append("g")
           .attr('class', 'pathLines')
+          .attr('display', 'none')
           .attr('transform', `translate(${cellSize/2}, ${cellSize/2})`)
           .attr('stroke', "#222")
           .attr('stroke-dasharray', "2,2")
@@ -362,11 +362,22 @@ var matrixChart = function() {
       return highlightedNodes;
     }
     highlightedNodes = value;
+    console.log(value);
     g.selectAll('rect')
-      .attr('fill', d => highlightedNodes.includes(d.id) ? highlightColorScale(d.links.length) : normalColorScale(d.links.length))
-      .attr('stroke', d => highlightedNodes.includes(d.id) ? 'gray' : 'none');
+      .attr('fill', d => (highlightedNodes.length === 0 || highlightedNodes.includes(d.mesh_id)) ? highlightColorScale(d.paths.length) : normalColorScale(d.paths.length))
+      .attr('stroke', d => highlightedNodes.includes(d.mesh_id) ? 'gray' : 'none');
+      // .attr('fill', d => highlightedNodes.includes(d.id) ? highlightColorScale(d.links.length) : normalColorScale(d.links.length))
+      // .attr('stroke', d => highlightedNodes.includes(d.id) ? 'gray' : 'none');
 
     return chart;
+  }
+
+  chart.showLinkLines = function(value) {
+    if (!arguments.length) {
+      return showLinkLines;
+    }
+    showLinkLines = value;
+    g.select('.pathLines').attr('display', showLinkLines ? null : 'none');
   }
 
   return chart;

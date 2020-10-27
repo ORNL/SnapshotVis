@@ -16,6 +16,13 @@
     </style>
   </head>
   <body>
+    <input type="checkbox" id="showPathsCheck" checked>
+    <label for="showPathsCheck">Show Path Lines</label><br/><br/>
+
+    <label for="typeSelect">Type Filter:</label>
+    <select id="typeSelect"></select><br/>
+  
+      
     <div id="chart"></div>
   </body>
 
@@ -85,13 +92,53 @@
         //   }
         // });
         console.log(nodes);
-        console.log(d3.extent(pathLengths));
+        // console.log(d3.extent(pathLengths));
+    }
+
+    function setHighlightedNodes() {
+      const typeSelect = document.getElementById('typeSelect');
+      const selectedType = typeSelect.options[typeSelect.selectedIndex].text;
+      if (selectedType === 'All') {
+        chart.highlightedNodes([]);
+      } else {
+        const highlightedNodeSet = new Set();
+        // const highlightedNodes = [];
+        nodes.forEach((node, key) => {
+          node.type.forEach(t => {
+            if (t.type === selectedType) {
+              highlightedNodeSet.add(node.mesh_id);
+            }
+          });
+          // if (node.type === selectedType) {
+          //   highlightedNodes.push(node.mesh_id);
+          // }
+        });
+        chart.highlightedNodes([...highlightedNodeSet]);
+      }
     }
 
     d3.json("./data/2005/nodes.json")
       .then(data => {
+        console.log(data);
+        // const typeOptions = [...new Set(data.map())]
         prepData(data);
+
         createChart();
+
+        const typeOptions = [...new Set(d3.merge([...nodes.values()].map(d => d.type.map(t => t.type))))].sort(d3.ascending);
+        console.log(typeOptions);
+        const typeSelect = document.getElementById('typeSelect');
+        typeSelect.options[0] = new Option('All')
+        typeOptions.map(d => typeSelect.options[typeSelect.options.length] = new Option(d));
+        typeSelect.addEventListener('change', function() {
+          setHighlightedNodes();
+        });
+
+        const pathCheck = document.getElementById('showPathsCheck');
+        pathCheck.checked = chart.showLinkLines();
+        pathCheck.addEventListener('change', function() {
+          chart.showLinkLines(pathCheck.checked);
+        });
       })
       .catch(error => {
         console.log(error);

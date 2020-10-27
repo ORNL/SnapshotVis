@@ -184,9 +184,6 @@
       const groupedData = d3.group(data, d => d.node_1_id);
       console.log(groupedData);
 
-      // console.log(groupedData.get("C0007450").get("C0027765"));
-      // console.log(groupedData.get("C0027765").get("C0007450"));
-
       // make array of node info
       nodes = new Map();
       groupedData.forEach((v, k) => {
@@ -196,11 +193,6 @@
           name: nodeInfo.name,
           type: nodeInfo.type
         });
-        // nodes.push({
-        //   id: nodeInfo.mesh_id,
-        //   name: nodeInfo.name,
-        //   type: nodeInfo.type
-        // }); 
       });
       console.log(nodes);
 
