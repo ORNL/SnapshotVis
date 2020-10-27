@@ -40,7 +40,11 @@ var matrixChart = function() {
         let rowCount = Math.ceil(_nodes.size / colCount);
         console.log(`colCount = ${colCount}, rowCount = ${rowCount}`);
 
-        const nodeValues = [..._nodes.values()];
+        const nodeValues = [..._nodes.values()].sort((a,b) => {
+          // return b.paths.length - a.paths.length;
+          return d3.max(b.paths, p => p.len) - d3.max(a.paths, p => p.len);
+        });
+        
         let maxNumPaths = 0;
         let maxNumPathNodes = 0;
         nodeValues.map(n => {
@@ -94,12 +98,25 @@ var matrixChart = function() {
         normalColorScale = d3.scaleSequentialSqrt([0, maxNumPaths], t => d3.interpolateGreys((t * .5 + 0.15)));
         highlightColorScale = d3.scaleSequentialSqrt([0, maxNumPaths], t => d3.interpolateBlues((t * .5 + 0.15)));
 
+        function printTypes(d) {
+          let str = '';
+          d.type.map((t,i) => {
+            str += t.type;
+            if ((i+1) < d.type.length) {
+              str += '; ';
+            } 
+          });
+          return str;
+        }
+
         g.append('g')
           .selectAll('rect')
           .data(nodeValues)
           .join('rect')
             .attr('id', d => `${d.mesh_id}`)
             .attr('fill', d => (highlightedNodes.length === 0 || highlightedNodes.includes(d.mesh_id)) ? highlightColorScale(d.paths.length) : normalColorScale(d.paths.length))
+            .attr('stroke', 'none')
+            .attr('stroke-width', 1.2)
             .attr('y', (d,i) => {
               d.y = y(Math.floor(i / colCount));
               return d.y;
@@ -123,14 +140,14 @@ var matrixChart = function() {
               }
             })
             .append("title")
-              .text(d => `ID: ${d.mesh_id}\nName: ${d.name}\nPath Count: ${d.paths.length}`);
+              .text(d => `ID: ${d.mesh_id}\nName: ${d.name}\n Types: ${printTypes(d)}\n Path Count: ${d.paths.length}`);
 
         function clearCell(d) {
           d3.select('.pathLines').selectAll('*').remove();
           d3.select(`rect#${d.mesh_id}`)
             .attr('fill', d => (highlightedNodes.length === 0 || highlightedNodes.includes(d.mesh_id)) ? highlightColorScale(d.paths.length) : normalColorScale(d.paths.length))
-            .attr('stroke', d => highlightedNodes.includes(d.mesh_id) ? 'gray' : 'none')
-            .attr("stroke-width", 1);
+            .attr('stroke', d => highlightedNodes.includes(d.mesh_id) ? '#888' : 'none');
+            // .attr("stroke-width", 1);
 
           d.paths.map(path => {
             path.nodes.map((n,i) => {
@@ -147,11 +164,8 @@ var matrixChart = function() {
         function selectCell(d) {
           d3.select(`rect#${d.mesh_id}`)
             .attr("stroke", "#000")
-            .attr("fill", "#444")
-            .attr("stroke-width", 2);
+            .attr("fill", "#444");
           
-          console.log(d);
-
           let pathHierarchy = {
             name: d.mesh_id,
             children: []
@@ -173,7 +187,7 @@ var matrixChart = function() {
             });
           });
 
-          console.log(pathHierarchy);
+          // console.log(pathHierarchy);
 
           const pathRoot = d3.hierarchy(pathHierarchy);
           pathRoot.dx = 10;
@@ -240,78 +254,15 @@ var matrixChart = function() {
                   (path.nodes);
               });
             
-            // const xOffset = pathIdx > maxNumPaths / 2 ? width/2 : 0;
-            // const detailPath = detailsG.append('g')
-            //   .attr('transform', `translate(${xOffset}, ${pathIdx % (maxNumPaths / 2) * cellSize})`)
-            
-            
-            // console.log(`xOffset: ${xOffset}`);
             path.nodes.map((n, i) => {
               if (i !== 0) {
                 d3.select(`rect#${n}`)
-                  .attr("stroke", (i === path.nodes.length - 1 && !endNodes.has(n)) ? '#000' : '#777')
-                  .attr("stroke-width", 1.5)
+                  .attr('stroke', '#444')
+                  // .attr("stroke", (i === path.nodes.length - 1 && !endNodes.has(n)) ? '#000' : '#777')
                   .raise();
-                // detailPath.append('line')
-                //   .attr('x1', details_x(i-1))
-                //   .attr('x2', details_x(i))
-                //   .attr('y1', 0)
-                //   .attr('y2', 0)
-                //   .attr('stroke', '#000')
-                //   .attr('stroke-width', 2);
-                // detailPath.append('circle')
-                //   .attr('cx', details_x(i))
-                //   .attr('cy', 0)
-                //   .attr('r', 2)
-                //   // .attr('height', 4)
-                //   .attr('fill', 'black');
               }
             });
-
-            /*
-            // console.log(_nodes);
-            // console.log(path.nodes);
-            let endNode = _nodes.get(path.nodes[path.nodes.length-1]);
-            // console.log(endNode);
-            detailPath.append('text')
-              .attr('text-anchor', 'start')
-              .attr('x', 0)
-              .attr('y', 0)
-              .attr('fill', 'black')
-              .text(`${d.name} → (${path.nodes.length - 2}) → ${endNode.name}`);
-            endNodes.add(path.nodes[path.nodes.length - 1]);
-            */
           });
-          // for (let path of d.paths.values()){
-          //   console.log(path);
-          //   d3.select('.pathLines').append('path')
-          //     .attr("d", function(p) {
-          //       return d3.line()
-          //         .curve(d3.curveLinear)
-          //         .x(d => nodes.get(d).x)
-          //         .y(d => nodes.get(d).y)
-          //         (path.nodes);
-          //     });
-
-          //   const detailPath = detailsG.append('g')
-          //     .attr('tranform', `translate(0, )`)
-          //   path.nodes.map((n,i) => {
-          //     if (i !== 0) {
-          //       d3.select(`rect#${n}`)
-          //         .attr("stroke", (i === path.nodes.length - 1 && !endNodes.has(n)) ? "#000" : "#777")
-          //         .attr("stroke-width", 1.5)
-          //         .raise();
-          //       detailPath.append('line')
-          //         .attr('x1', 0)
-          //         .attr('x2', width / 2)
-          //         .attr('y1', cellSize / 2)
-          //         .attr('y2', cellSize / 2)
-          //         .attr('stroke', '#000')
-          //         .attr('stroke-width', 2);
-          //     }
-          //   });
-          //   endNodes.add(path.nodes[path.nodes.length - 1]);
-          // }
         };
 
         g.append("g")
@@ -365,7 +316,8 @@ var matrixChart = function() {
     console.log(value);
     g.selectAll('rect')
       .attr('fill', d => (highlightedNodes.length === 0 || highlightedNodes.includes(d.mesh_id)) ? highlightColorScale(d.paths.length) : normalColorScale(d.paths.length))
-      .attr('stroke', d => highlightedNodes.includes(d.mesh_id) ? 'gray' : 'none');
+      .attr('stroke', d => highlightedNodes.includes(d.mesh_id) ? '#888' : 'none');
+      // .attr('stroke-width', 1.2);
       // .attr('fill', d => highlightedNodes.includes(d.id) ? highlightColorScale(d.links.length) : normalColorScale(d.links.length))
       // .attr('stroke', d => highlightedNodes.includes(d.id) ? 'gray' : 'none');
 
