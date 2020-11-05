@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="./js/d3.min.js"></script>
+    <script src="./js/d3-array.min.js"></script>
+    <script src="./js/treeChart.js"></script>
+
+    <style>
+      body {
+        font: 12px sans-serif;
+        /* margin: 4px 20px 0px 20px; */
+        /* background: gray; */
+        background-color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <label for="typeSelect">Type:</label>
+    <select id="typeSelect"></select><br/><br/>
+  
+    <label for="conceptSelect">Concept:</label>
+    <select id="conceptSelect"></select><br/>
+    
+    <div id="treeChart"></div>
+  </body>
+
+  <script>
+    let chart;
+    let chartData = {};
+    const margin = {top: 20, right: 20, bottom: 20, left: 20};
+
+    const createTreeChart = () => {
+      d3.select('#treeChart').selectAll('*').remove();
+
+      if (chartData.concepts) {
+        const chartWidth = document.getElementById('treeChart').clientWidth;
+
+        const selectedConceptName = getSelectedConcept();
+        if (selectedConceptName) {
+          console.log(`selected concept is ${selectedConceptName}`);
+
+          const selectedConcept = chartData.concepts.find(d => d.name === selectedConceptName);
+          console.log(selectedConcept);
+
+          const conceptPaths = chartData.paths.filter(d => (d.concept_1 === selectedConcept.id || d.concept_2 === selectedConcept.id));
+          console.log('paths:');
+          console.log(conceptPaths);
+        }
+        
+
+
+
+        // chart = matrixChart()
+        //   .width(chartWidth)
+        //   .height(1000)
+        //   .margin(margin);
+        // d3.select('#chart').call(chart, data);
+      }
+    }
+
+    const clearSelectOptions = (select) => {
+      for (var i = select.options.length - 1; i >= 0; i--) {
+        select.remove(i);
+      }
+    };
+
+    const getSelectedType = () => {
+      const typeSelect = document.getElementById('typeSelect');
+      return typeSelect.options[typeSelect.selectedIndex].text;
+    };
+
+    const getSelectedConcept = () => {
+      const conceptSelect = document.getElementById('conceptSelect');
+      return conceptSelect.options[conceptSelect.selectedIndex].text;
+    }
+
+    const populateSelectOptions = (select, options) => {
+      options.map(d => select.options[select.options.length] = new Option(d));
+    }
+
+    const populateTypeSelect = () => {
+      const typeSelect = document.getElementById('typeSelect');
+      clearSelectOptions(typeSelect);
+
+      const typeOptions = [...new Set(d3.merge(chartData.concepts.map(d => {
+        return d.types.map(t => t.name);
+      })))].sort(d3.ascending);
+      typeOptions.unshift('Choose Type');
+
+      populateSelectOptions(typeSelect, typeOptions);
+    };
+
+    const populateConceptSelect = () => {
+      const conceptSelect = document.getElementById('conceptSelect');
+      clearSelectOptions(conceptSelect);
+      const selectedType = getSelectedType();
+      if (selectedType !== 'Choose Type') {
+        const typeConcepts = chartData.concepts.filter(d => {
+          return d.types.findIndex(t => t.name === selectedType) !== -1;
+        });
+        console.log(typeConcepts);
+        const conceptOptions = [...new Set(typeConcepts.map(d => d.name))].sort(d3.sortAscending);
+        conceptOptions.unshift('Choose Concept');
+        populateSelectOptions(conceptSelect, conceptOptions);
+      }
+    }
+
+    const prepData = () => {
+      if (chartData) {
+        // populate type dropdown
+        populateTypeSelect();
+        // typeOptions = [...new Set(d3.merge(chartData.concepts.map(d => {
+        //   return d.types.map(t => t.name);
+        // })))].sort(d3.ascending);
+        // console.log(typeOptions);
+        // const typeSelect = document.getElementById('typeSelect');
+        // typeSelect.options[0] = new Option('All');
+        // typeOptions.map(d => typeSelect.options[typeSelect.options.length] = new Option(d));
+        // typeSelect.addEventListener('change', function() {
+        //   populateConceptSelect();
+        // });
+
+
+        // document.getElementById('searchText').addEventListener('input', function() {
+        //   const textValue = document.getElementById('searchText').value;
+        //   console.log(textValue);
+        // });
+
+        document.getElementById('typeSelect').addEventListener('change', function() {
+          populateConceptSelect();
+        });
+        document.getElementById('conceptSelect').addEventListener('change', function() {
+          createTreeChart();
+        });
+      }
+    }
+
+    function setHighlightedNodes() {
+      console.log('setHighlightedNodes called');
+    }
+
+    const conceptType = (d) => {
+      let origTypes = JSON.parse(d.types);
+      let typeNames = Object.keys(origTypes);
+      const types = typeNames.map(name => {
+        return {
+          name: name,
+          group: origTypes[name]
+        }
+      });
+      return {
+        id: d.id,
+        name: d.name,
+        papers: JSON.parse(d.papers),
+        types: types
+        // types: JSON.parse(d.types)
+      }
+    };
+
+    const pathType = d => {
+      return {
+        concept_1: d.concept_1,
+        concept_2: d.concept_2,
+        length: d.length,
+        path: JSON.parse(d.path)
+      }
+    };
+
+    d3.csv("./data/20201102/concepts.csv", conceptType)
+      .then(conceptData => {
+        chartData.concepts = conceptData;
+        d3.csv("./data/20201102/paths.csv", pathType)
+          .then(pathData => {
+            chartData.paths = pathData;
+            console.log(chartData);
+            prepData();
+          })
+          .catch(error => {
+            console.log(error);
+          })
+      })
+      .catch(error => {
+        console.log(error);
+      });
+       
+    /*
+    d3.csv("./data/20201030/concepts.csv", conceptType)
+      .then(conceptData => {
+        // console.log(conceptData);
+        // console.table(conceptData);
+        chartData.concepts = conceptData;
+
+        d3.csv("./data/20201030/edges.csv", d3.autoType)
+          .then(edgeData => {
+            // console.log(edgeData);
+            chartData.edges = edgeData;
+
+            d3.csv("./data/20201030/papers.csv", d3.autoType)
+              .then(paperData => {
+                // console.log(paperData);
+                chartData.papers = paperData;
+
+                d3.csv("./data/20201030/paths.csv", pathType)
+                  .then(pathData => {
+                    // console.log(pathData);
+                    chartData.paths = pathData;
+                    console.log(chartData);
+                    prepData();
+                  })
+                  .catch(error => {
+                    console.log(error);
+                  });
+              })
+              .catch(error => {
+                console.log(error);
+              });
+          })
+          .catch(error => {
+            console.log(error);
+          });
+      })
+      .catch(error => {
+        console.log(error);
+      });
+      */
+  </script>
+</html>

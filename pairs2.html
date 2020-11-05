@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="./js/d3.min.js"></script>
+    <script src="./js/d3-array.min.js"></script>
+    <script src="./js/treeChart.js"></script>
+
+    <style>
+      body {
+        font: 12px sans-serif;
+        /* margin: 4px 20px 0px 20px; */
+        /* background: gray; */
+        background-color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <label for="typeSelect">Type:</label>
+    <select id="typeSelect"></select><br/><br/>
+  
+    <label for="conceptSelect">Concept:</label>
+    <select id="conceptSelect"></select><br/>
+  
+    <div id="treeChart"></div>
+  </body>
+
+  <script>
+    let nodes;
+    let edges = null;
+    let chart;
+    const margin = {top: 20, right: 20, bottom: 20, left: 20};
+
+    const clearSelectOptions = (select) => {
+      for (var i = select.options.length - 1; i >= 0; i--) {
+        select.remove(i);
+      }
+    };
+
+    const getSelectedType = () => {
+      const typeSelect = document.getElementById('typeSelect');
+      return typeSelect.options[typeSelect.selectedIndex].text;
+    };
+
+    const getSelectedConcept = () => {
+      const conceptSelect = document.getElementById('conceptSelect');
+      return conceptSelect.options[conceptSelect.selectedIndex].text;
+    }
+
+    const populateSelectOptions = (select, options) => {
+      options.map(d => select.options[select.options.length] = new Option(d));
+    }
+
+    const populateTypeSelect = () => {
+      const typeSelect = document.getElementById('typeSelect');
+      clearSelectOptions(typeSelect);
+
+      const typeOptions = [...new Set(d3.merge([...nodes.values()].map(d => d.types.map(t => t.type))))].sort(d3.ascending);
+      // const typeOptions = [...new Set(d3.merge(chartData.concepts.map(d => {
+      //   return d.types.map(t => t.name);
+      // })))].sort(d3.ascending);
+      typeOptions.unshift('Choose Type');
+
+      populateSelectOptions(typeSelect, typeOptions);
+    };
+
+    const populateConceptSelect = () => {
+      const conceptSelect = document.getElementById('conceptSelect');
+      clearSelectOptions(conceptSelect);
+      const selectedType = getSelectedType();
+      if (selectedType !== 'Choose Type') {
+        let typeNodes = [];
+        nodes.forEach((node, key) => {
+          if (node.types.findIndex(t => t.type === selectedType) !== -1) {
+            typeNodes.push(node);
+          }
+        });
+        console.log(typeNodes);
+        // const typeConcepts = chartData.concepts.filter(d => {
+        //   return d.types.findIndex(t => t.name === selectedType) !== -1;
+        // });
+        // console.log(typeConcepts);
+        const conceptOptions = [...new Set(typeNodes.map(d => d.name))].sort(d3.sortAscending);
+        conceptOptions.unshift('Choose Concept');
+        populateSelectOptions(conceptSelect, conceptOptions);
+      }
+    }
+
+    // const createChart = () => {
+    //   if (nodes) {
+    //     d3.select('#chart').selectAll('*').remove();
+    //     const chartWidth = document.getElementById('chart').clientWidth;
+
+    //     data = {
+    //       nodes: nodes,
+    //       edges: edges,
+    //     }
+    //     chart = matrixChart()
+    //       .width(chartWidth)
+    //       .height(1000)
+    //       .margin(margin);
+    //     d3.select('#chart').call(chart, data);
+    //   }
+    // }
+
+    const getNodesByName = (name) => {
+      let foundNodes = [];
+      nodes.forEach((node, key) => {
+        if (node.name === name) {
+          foundNodes.push(node);
+        }
+      });
+      return foundNodes;
+    };
+
+    const createTreeChart = () => {
+      d3.select('#chart').selectAll('*').remove();
+      const chartWidth = document.getElementById('treeChart').clientWidth;
+
+      if (nodes) {
+        const selectedConcept = getSelectedConcept();
+        if (selectedConcept && selectedConcept !== 'Choose Concept') {
+          let selectedNodes = getNodesByName(selectedConcept);
+          if (selectedNodes > 1) { console.log("What the heck!"); }
+
+          let treeData = {
+            name: selectedNodes[0].concept_id,
+            longName: selectedNodes[0].name,
+            children: []
+          };
+
+          selectedNodes[0].paths.map(path => {
+            currentNode = treeData;
+            path.path.map((node_id, i) => {
+              if (i > 0) {
+                let childNode = currentNode.children.find(d => d.name === node_id);
+                if (!childNode) {
+                  childNode = {
+                    name: node_id,
+                    longName: nodes.get(node_id).name,
+                    children: []
+                  };
+                  currentNode.children.push(childNode);
+                }
+                currentNode = childNode;
+              }
+            });
+            // path.nodes.map((node_id, i) => {
+            //   if (i > 0) {
+            //     let childNode = currentNode.children.find(d => d.name === node_id);
+            //     if (!childNode) {
+            //       childNode = {
+            //         name: node_id,
+            //         longName: nodes.get(node_id).name,
+            //         children: []
+            //       };
+            //       currentNode.children.push(childNode);
+            //     }
+            //     currentNode = childNode;
+            //   }
+            // });
+          });
+
+          console.log(treeData);
+
+          chart = treeChart()
+            .width(chartWidth)
+            .height(1000)
+            .margin(margin);
+          d3.select('#treeChart').call(chart, treeData);
+        }
+      }
+    };
+
+    const prepData = (data) => {
+        let pathLengths = [];
+        // console.log(Object.keys(data));
+        nodes = new Map(Object.keys(data).map(k => {
+          data[k].paths.map(path => {
+            if (path.path[0] !== data[k].concept_id) {
+              // console.log(data[k].concept_id);
+              path.path.reverse();
+              // console.log(path.path);
+            }
+            if (path.path.length > 2) {
+              console.log(data[k]);
+            }
+            pathLengths.push(path.path.length);
+          });
+          // data[k].paths = Object.values(data[k].paths);
+          // data[k].paths.map(path => {
+          //   if (path.nodes[0] !== k) {
+          //     path.nodes.reverse();
+          //   }
+          //   pathLengths.push(path.nodes.length);
+          // });
+          // data[k].paths.sort((a,b) => d3.ascending(a.nodes.length, b.nodes.length));
+          return [data[k].concept_id, data[k]];
+          // return [k, data[k]];
+        }));
+        console.log(d3.extent(pathLengths));
+        console.log(nodes);
+    }
+
+    function setHighlightedNodes() {
+
+    }
+
+    d3.json("./data/2020/concepts.json")
+      .then(data => {
+        console.log(data);
+        prepData(data);
+
+        // console.log([...new Set(Object.values(data).map(d => d.name))]);
+
+        populateTypeSelect();
+        document.getElementById('typeSelect').addEventListener('change', function() {
+          populateConceptSelect();
+        });
+
+        document.getElementById('conceptSelect').addEventListener('change', function() {
+          createTreeChart();
+        });
+
+        // const typeOptions = [...new Set(d3.merge([...nodes.values()].map(d => d.type.map(t => t.type))))].sort(d3.ascending);
+        // console.log(typeOptions);
+        // const typeSelect = document.getElementById('typeSelect');
+        // typeSelect.options[0] = new Option('All')
+        // typeOptions.map(d => typeSelect.options[typeSelect.options.length] = new Option(d));
+        // typeSelect.addEventListener('change', function() {
+        //   setHighlightedNodes();
+        // });
+
+        // const pathCheck = document.getElementById('showPathsCheck');
+        // pathCheck.checked = chart.showLinkLines();
+        // pathCheck.addEventListener('change', function() {
+        //   chart.showLinkLines(pathCheck.checked);
+        // });
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  </script>
+</html>

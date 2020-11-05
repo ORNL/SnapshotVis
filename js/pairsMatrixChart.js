@@ -187,7 +187,7 @@ var matrixChart = function() {
             });
           });
 
-          // console.log(pathHierarchy);
+          console.log(pathHierarchy);
 
           const pathRoot = d3.hierarchy(pathHierarchy);
           pathRoot.dx = 10;
