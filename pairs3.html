@@ -205,9 +205,72 @@
     }
 
     const handleNodeHover = (nodeInfo) => {
+      // console.log(nodeInfo);
+      d3.select('#infoList').selectAll('*').remove();
+
+      const selectedConceptName = getSelectedConcept();
+      
+      if (nodeInfo.type === 'paper') {
+        console.log("PAPER");
+        const concept1 = nodes.get(nodeInfo.metadata.concept_1);
+        const concept2 = nodes.get(nodeInfo.metadata.concept_2);
+        d3.select('#infoList').append('h3').html('Associated Concepts')
+        d3.select('#infoList').append('h4').html(`Concept 1:`);
+        d3.select('#infoList').append('p').html(formatConceptHTML(concept1));
+        d3.select('#infoList').append('h4').html(`Concept 2:`);
+        d3.select('#infoList').append('p').html(formatConceptHTML(concept2));
+        d3.select('#infoList').append('h4').html('Paper Linking Concepts')
+        const paper = papers.get(nodeInfo.name);
+        d3.select('#infoList').append('p').html(formatPaperHTML(paper, nodeInfo.metadata.sentence, nodeInfo.metadata.count));
+      } else if (nodeInfo.type === 'link') {
+        console.log("LINK");
+      } else if (nodeInfo.type === 'concept') {
+        const concept = nodes.get(nodeInfo.name);
+        if (concept.name === selectedConceptName) {
+          console.log("ROOT CONCEPT");
+          d3.select('#infoList').append('h3').html('Selected Concept (Root)');
+          d3.select('#infoList').append('p').html(formatConceptHTML(concept));
+          d3.select('#infoList').append('h4').html('Associated Concepts:');
+          const associatedConcepts = [...new Set(d3.merge(concept.paths.map(p => p.path)))];
+          associatedConcepts.map(cid => {
+            if (cid != nodeInfo.name) {
+              const c = nodes.get(cid);
+              d3.select('#infoList').append('p').html(formatConceptHTML(c));
+            }
+          });
+          d3.select('#infoList').append('h4').html('Papers Linking Associated Concepts:');
+          const linkingPaperIds = [...new Set(d3.merge(concept.paths.map(p => p.edges.map(e => e.paper))))];
+          const linkingPapers = linkingPaperIds.map(d => papers.get(d)).sort((a,b) => d3.descending(a.year, b.year));
+          // console.log(linkingPapers);
+          linkingPapers.map(p => {
+            // const p = papers.get(pid);
+            d3.select('#infoList').append('p').html(formatPaperHTML(p, null, null));
+          });
+        } else {
+          console.log("CONCEPT");
+          const parentConcept = nodes.get(nodeInfo.metadata.parent_concept_id);
+          // const c2 = nodes.get(nodeInfo.metadata.concept_2);
+          d3.select('#infoList').append('h3').html('Associated Concepts')
+          d3.select('#infoList').append('h4').html(`Parent Concept:`);
+          d3.select('#infoList').append('p').html(formatConceptHTML(parentConcept));
+          d3.select('#infoList').append('h4').html(`Concept:`);
+          d3.select('#infoList').append('p').html(formatConceptHTML(concept));
+
+          d3.select('#infoList').append('h3').html('Papers Linking Concepts')
+          nodeInfo.metadata.papers.map((paper_id, i) => {
+            const paper = papers.get(paper_id);
+            // const paperLinkMetadata = nodeInfo.children.find(c => c.name === paper_id).metadata;
+            d3.select('#infoList').append('h4').html(`Paper #${i + 1}`);
+            d3.select('#infoList').append('p').html(formatPaperHTML(paper, null, null));
+          });
+        }
+      }
+    };
+
+    const handleNodeHoverOld = (nodeInfo) => {
       d3.select('#infoList').selectAll('*').remove();
       // console.log('nodeHoverHandler');
-      // console.log(nodeInfo);
+      console.log(nodeInfo);
 
       if (nodeInfo.metadata) {
         const c1 = nodes.get(nodeInfo.metadata.concept_1);
@@ -264,7 +327,6 @@
         d3.select('#infoList').append('p').html(formatConceptHTML(concept));
         d3.select('#infoList').append('h4').html('Associated Concepts:');
         const associatedConcepts = [...new Set(d3.merge(concept.paths.map(p => p.path)))];
-        // console.log(associatedConcepts);
         associatedConcepts.map(cid => {
           if (cid != nodeInfo.name) {
             const c = nodes.get(cid);
@@ -282,7 +344,97 @@
       }
     };
 
+    const testPrep = () => {
+      console.log('testing new prep');
+      concept = nodes.get('C0008625');
+      console.log(concept);
+      makeTree(concept);
+    };
+
+    const makeTree = (concept) => {
+      let treeData = {
+        name: concept.concept_id,
+        type: 'concept',
+        children: []
+      };
+      concept.paths.map(path => {
+        let currentNode = treeData;
+        // console.log(path.path);
+        path.path.map((currentConceptID, i) => {
+          if (i > 0) {
+            const parentConceptID = path.path[i-1];
+          
+            let linkNode = currentNode.children.find(d => d.name === `${parentConceptID}-${currentConceptID}`);
+            let childNode;
+            if (!linkNode) {
+              childNode = {
+                name: currentConceptID,
+                type: 'concept',
+                metadata: {
+                  parent_concept_id: parentConceptID,
+                  papers: []
+                },
+                children: []
+              };
+              linkNode = {
+                name: `${parentConceptID}-${currentConceptID}`,
+                type: 'link',
+                children: [childNode]
+              };
+              currentNode.children.push(linkNode);
+            } else {
+              childNode = linkNode.children.find(d => d.name === currentConceptID);
+            }
+
+            const linkingEdges = path.edges.filter(e => {
+              return (e.concept_1 === currentConceptID || e.concept_2 === currentConceptID) &&
+                (e.concept_1 === parentConceptID || e.concept_2 === parentConceptID);
+            });
+            
+            linkingEdges.map(e => {
+              linkNode.children.push({
+                name: e.paper,
+                type: 'paper',
+                metadata: {
+                  concept_1: parentConceptID,
+                  concept_2: currentConceptID,
+                  year: +e.year,
+                  sentence: e.sentence,
+                  count: e.count
+                },
+                children: []
+              });
+              childNode.metadata.papers.push(e.paper);
+            });
+            currentNode = childNode;
+          }
+        });
+      });
+
+      // console.log(treeData);
+      return treeData;
+    };
+
     const prepData = (conceptData, paperData) => {
+      papers = new Map(Object.keys(paperData).map(paperKey => {
+        return [paperData[paperKey].id, paperData[paperKey]];
+      }));
+
+      nodes = new Map(Object.keys(conceptData).map(k => {
+        conceptData[k].paths.map(path => {
+          if (path.path[0] !== conceptData[k].concept_id) {
+            path.path.reverse();
+          }
+        });
+        conceptData[k].linkTree = makeTree(conceptData[k]);
+        return [conceptData[k].concept_id, conceptData[k]];
+      }));
+
+      console.log(nodes);
+      console.log(papers);
+    }
+
+    const prepDataOld = (conceptData, paperData) => {
       papers = new Map(Object.keys(paperData).map(paperKey => {
         return [paperData[paperKey].id, paperData[paperKey]];
       }));
@@ -358,6 +510,8 @@
         .then(conceptData => {
           // console.log(conceptData);
           prepData(conceptData, paperData);
+          
+          // testPrep();
 
           populateTypeSelect();
           document.getElementById('typeSelect').addEventListener('change', function() {

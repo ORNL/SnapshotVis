@@ -72,7 +72,7 @@ var forceDirectedGraphChart = function() {
         const nodes = root.descendants();
 
         const simulation = d3.forceSimulation(nodes)
-          .force("link", d3.forceLink(links).id(d => d.id).distance(8).strength(1))
+          .force("link", d3.forceLink(links).id(d => d.id).distance(10).strength(1))
           .force("charge", d3.forceManyBody().strength(-50))
           .force("x", d3.forceX())
           .force("y", d3.forceY());
@@ -91,6 +91,18 @@ var forceDirectedGraphChart = function() {
           .data(links)
           .join("line");
 
+        const nodeFill = (node) => {
+          return node.data.type === "concept" ? "#fff" : node.data.type === "paper" ? "#000" : "#777";
+          // if (type === 'link') { return '#aaa'; }
+          // if (type === 'concept') { return '#fff'; }
+          // if (type === 'paper') { return "#000"; }
+        };
+        const nodeStroke = (node) => {
+          return node.data.type === "concept" ? null : "#fff";
+        };
+        const nodeRadius = (node) => {
+          return node.data.type === "link" ? 4 : node.parent ? 6 : 8;
+        };
         const node = g.append("g")
           .attr("fill", "#fff")
           .attr("stroke", "#000")
@@ -98,9 +110,17 @@ var forceDirectedGraphChart = function() {
           .selectAll("circle")
           .data(nodes)
           .join("circle")
-            .attr("fill", d => d.parent ? d.children ? null : "#000" : "skyblue")
-            .attr("stroke", d => d.children ? null : "#fff")
-            .attr("r", 5)
+            .attr("fill", d => nodeFill(d))
+            .attr("stroke", d => nodeStroke(d))
+            .attr("r", d => nodeRadius(d))
+            // .attr("fill", d => fillByType(d.data.type))
+            // .attr("stroke", d => d.data.type === "concept" ? null : "#fff")
+            // .attr("fill", d => d.type === 'link' ? 'yellow' : d.type === 'concept' ? 'white' : 'black')
+            // .attr("stroke", d => d.type === 'concept' ? null : "#fff")
+            // .attr("r", d => d.data.type === 'link' ? 5 : d.data.type === "paper" ? 6 : 8)
+            // .attr("fill", d => d.parent ? d.children ? null : "#000" : "skyblue")
+            // .attr("stroke", d => d.children ? null : "#fff")
+            // .attr("r", 5)
             .call(drag(simulation));
         
         node.on("mouseover", d => {
