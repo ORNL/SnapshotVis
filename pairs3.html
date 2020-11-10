@@ -36,17 +36,29 @@
         min-width: 400px;
       }
 
+      a {
+        color: blue;
+        text-decoration: none;
+      }
+
+      ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0px;
+      }
+
     </style>
   </head>
   <body>
     <div class="layout">
       <div class="child-input">
         <label for="typeSelect">Type:</label>
-        <select id="typeSelect" style="max-width: 120px;"></select><br/><br/>
+        <select id="typeSelect" style="max-width: 170px;"></select><br/><br/>
         <label for="searchInput">Search Concepts:</label>
         <input id="searchInput" type="text"></input><br/>
         <div>
-          <h4>Concepts:</h4>
+          <h3>Filtered Concepts:</h3>
+          <strong>(click name to see concept paths)</strong>
           <ul id="conceptList">
           </ul>
         </div>
@@ -94,6 +106,7 @@
           const foundNodes = filteredNodeArr.filter(n => {
             return re.test(n.name);
           });
+          foundNodes.sort((a,b) => d3.ascending(a.name, b.name));
           // console.log(foundNodes);
           populateConceptList(foundNodes);
         }
@@ -343,11 +356,13 @@
                 }
               });
             }
+            filteredNodeArr.sort((a,b) => d3.ascending(a.name, b.name));
             document.getElementById('searchInput').value = '';
             populateConceptList(filteredNodeArr);
           });
 
           filteredNodeArr = [...nodes.values()];
+          filteredNodeArr.sort((a,b) => d3.ascending(a.name, b.name));
           populateConceptList(filteredNodeArr);
         })
         .catch(error => {
