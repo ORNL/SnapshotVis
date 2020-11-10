@@ -101,7 +101,7 @@ var forceDirectedGraphChart = function() {
           return node.data.type === "concept" ? null : "#fff";
         };
         const nodeRadius = (node) => {
-          return node.data.type === "link" ? 4 : node.parent ? 6 : 8;
+          return node.data.type === "link" || node.data.type === "paper" ? 4 : node.parent ? 6 : 8;
         };
         const node = g.append("g")
           .attr("fill", "#fff")
