@@ -79,7 +79,7 @@
     }
 
     function selectConcept(concept_id) {
-      console.log('selected concept ' + concept_id);
+      // console.log('selected concept ' + concept_id);
       selectedConcept = nodes.get(concept_id);
       createTreeChart(selectedConcept);
     }
@@ -88,14 +88,14 @@
       () => {
         const searchString = document.getElementById('searchInput').value;
         // const searchString = 'anti';
-        console.log(`searchString: ${searchString}`);
+        // console.log(`searchString: ${searchString}`);
         
         if (nodes) {
           var re = new RegExp(`\\b${searchString}`, 'gi');
           const foundNodes = filteredNodeArr.filter(n => {
             return re.test(n.name);
           });
-          console.log(foundNodes);
+          // console.log(foundNodes);
           populateConceptList(foundNodes);
         }
       }
@@ -318,7 +318,7 @@
       filteredNodeArr = [...nodes.values()];
 
       console.log(nodes);
-      console.log(filteredNodeArr);
+      // console.log(filteredNodeArr);
       console.log(papers);
     }
     
