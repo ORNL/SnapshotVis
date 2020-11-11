@@ -122,8 +122,14 @@ var forceDirectedGraphChart = function() {
           }
         });
 
-        // node.append("text")
-        //   .text(d => d.data.name);
+        // const label = node.append("text")
+        //   .text(d => d.name)
+        //   .attr("font-family", "sans-serif")
+        //   .attr("font-size", "11px")
+        //   .attr("dy", 15)
+        //   .attr("dx", -15)
+        //   .attr("fill", "#555")
+        //   .attr("stroke", "none");
 
         node.append("title")
           .text(d => d.data.name);
