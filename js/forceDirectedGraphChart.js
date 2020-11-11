@@ -99,13 +99,13 @@ var forceDirectedGraphChart = function() {
 
         const link = g.append("g")
           .attr("stroke", "#777")
-          .attr("stroke-opacity", 0.6)
+          .attr("stroke-opacity", 0.3)
           .selectAll("line")
           .data(links)
           .join("line");
 
         const nodeFill = (node) => {
-          return node.data.type === "concept" ? node.parent ? "#fff" : "blue" : node.data.type === "paper" ? "#000" : "#777";
+          return node.data.type === "concept" ? node.parent ? "#fff" : "blue" : node.data.type === "paper" ? "#000" : "#999";
           // if (type === 'link') { return '#aaa'; }
           // if (type === 'concept') { return '#fff'; }
           // if (type === 'paper') { return "#000"; }
