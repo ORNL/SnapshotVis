@@ -105,7 +105,7 @@ var forceDirectedGraphChart = function() {
           .join("line");
 
         const nodeFill = (node) => {
-          return node.data.type === "concept" ? "#fff" : node.data.type === "paper" ? "#000" : "#777";
+          return node.data.type === "concept" ? node.parent ? "#fff" : "blue" : node.data.type === "paper" ? "#000" : "#777";
           // if (type === 'link') { return '#aaa'; }
           // if (type === 'concept') { return '#fff'; }
           // if (type === 'paper') { return "#000"; }
@@ -141,7 +141,7 @@ var forceDirectedGraphChart = function() {
           if (nodeHoverHandler) {
             nodeHoverHandler(d.data);
           }
-          circle.attr("fill", c => c === d ? "dodgerblue" : nodeFill(c));
+          circle.attr("fill", c => c === d ? "lightskyblue" : nodeFill(c));
         });
 
         if (showNodeLabels) {
