@@ -7,6 +7,12 @@ var forceDirectedGraphChart = function() {
   let nodeHoverHandler = null;
   let showNodeLabels = false;
   let clickedNode = null;
+  let conceptFill = "#fff";
+  let paperFill = "#000";
+  let rootFill = "blue";
+  let selectedFill = "deepskyblue";
+  let linkFill = "#999";
+  let unselectedPathOpacity = 0.2;
   
   function chart(selection, data) {
     _chartData = data;
@@ -105,7 +111,7 @@ var forceDirectedGraphChart = function() {
           .join("line");
 
         const nodeFill = (node) => {
-          return node.data.type === "concept" ? node.parent ? "#fff" : "blue" : node.data.type === "paper" ? "#000" : "#999";
+          return node.data.type === "concept" ? node.parent ? conceptFill : rootFill : node.data.type === "paper" ? paperFill : linkFill;
           // if (type === 'link') { return '#aaa'; }
           // if (type === 'concept') { return '#fff'; }
           // if (type === 'paper') { return "#000"; }
@@ -141,7 +147,7 @@ var forceDirectedGraphChart = function() {
           if (nodeHoverHandler) {
             nodeHoverHandler(d.data);
           }
-          circle.attr("fill", c => c === d ? "lightskyblue" : nodeFill(c));
+          circle.attr("fill", c => c === d ? selectedFill : nodeFill(c));
         });
 
         if (showNodeLabels) {

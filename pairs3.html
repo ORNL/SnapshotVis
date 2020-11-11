@@ -205,14 +205,16 @@
         console.log("PAPER");
         const concept1 = nodes.get(nodeInfo.metadata.concept_1);
         const concept2 = nodes.get(nodeInfo.metadata.concept_2);
-        d3.select('#infoList').append('h3').html('Associated Concepts')
-        d3.select('#infoList').append('h4').html(`Concept 1:`);
-        d3.select('#infoList').append('p').html(formatConceptHTML(concept1));
-        d3.select('#infoList').append('h4').html(`Concept 2:`);
-        d3.select('#infoList').append('p').html(formatConceptHTML(concept2));
-        d3.select('#infoList').append('h4').html('Paper Linking Concepts')
         const paper = papers.get(nodeInfo.name);
+        
+        d3.select("#infoList").append("h3").html("Selected Paper");
         d3.select('#infoList').append('p').html(formatPaperHTML(paper, nodeInfo.metadata.sentence, nodeInfo.metadata.count));
+
+        d3.select('#infoList').append('h3').html('Concepts Linked')
+        d3.select('#infoList').append('strong').html(`Concept 1:`);
+        d3.select('#infoList').append('p').html(formatConceptHTML(concept1));
+        d3.select('#infoList').append('strong').html(`Concept 2:`);
+        d3.select('#infoList').append('p').html(formatConceptHTML(concept2));
       } else if (nodeInfo.type === 'link') {
         console.log("LINK");
       } else if (nodeInfo.type === 'concept') {
