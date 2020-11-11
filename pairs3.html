@@ -67,8 +67,9 @@
           </ul>
         </div>
       </div>
-      <div class="child-chart" id="treeChart">
+      <div class="child-chart">
         <h3 style="text-align: center;">Graph</h3>
+        <div id="treeChart"></div>
       </div>
       <div class="child-info">
         <h3 style="text-align: center;">Selection Details</h3>
@@ -199,7 +200,7 @@
 
     const handleNodeHover = (nodeInfo) => {
       d3.select('#infoList').selectAll('*').remove();
-
+      console.log(nodeInfo);
       if (nodeInfo.type === 'paper') {
         console.log("PAPER");
         const concept1 = nodes.get(nodeInfo.metadata.concept_1);
@@ -245,8 +246,6 @@
           d3.select('#infoList').append('p').html(formatConceptHTML(concept));
           d3.select('#infoList').append('h4').html(`Parent Concept:`);
           d3.select('#infoList').append('p').html(formatConceptHTML(parentConcept));
-          
-
           d3.select('#infoList').append('h3').html('Papers Linking Concepts')
           nodeInfo.metadata.papers.map((paper_id, i) => {
             const paper = papers.get(paper_id);
@@ -262,11 +261,11 @@
       let treeData = {
         name: concept.concept_id,
         type: 'concept',
+        display_name: concept.name,
         children: []
       };
       concept.paths.map(path => {
         let currentNode = treeData;
-        // console.log(path.path);
         path.path.map((currentConceptID, i) => {
           if (i > 0) {
             const parentConceptID = path.path[i-1];
@@ -277,6 +276,7 @@
               childNode = {
                 name: currentConceptID,
                 type: 'concept',
+                display_name: nodes.get(currentConceptID).name,
                 metadata: {
                   parent_concept_id: parentConceptID,
                   papers: []
@@ -285,6 +285,7 @@
               };
               linkNode = {
                 name: `${parentConceptID}-${currentConceptID}`,
+                display_name: 'link',
                 type: 'link',
                 children: [childNode]
               };
@@ -302,6 +303,7 @@
               linkNode.children.push({
                 name: e.paper,
                 type: 'paper',
+                display_name: papers.get(e.paper).title,
                 metadata: {
                   concept_1: parentConceptID,
                   concept_2: currentConceptID,
@@ -332,9 +334,13 @@
             path.path.reverse();
           }
         });
-        conceptData[k].linkTree = makeTree(conceptData[k]);
+        // conceptData[k].linkTree = makeTree(conceptData[k]);
         return [conceptData[k].concept_id, conceptData[k]];
       }));
+
+      nodes.forEach((value, key) => {
+        value.linkTree = makeTree(value);
+      });
 
       filteredNodeArr = [...nodes.values()];
 

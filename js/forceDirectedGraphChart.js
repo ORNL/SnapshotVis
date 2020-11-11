@@ -5,7 +5,8 @@ var forceDirectedGraphChart = function() {
   let _chartData;
   let _chartDiv;
   let nodeHoverHandler = null;
-  let showNodeLabels = true;
+  let showNodeLabels = false;
+  let clickedNode = null;
   
   function chart(selection, data) {
     _chartData = data;
@@ -110,29 +111,42 @@ var forceDirectedGraphChart = function() {
           .attr("stroke-width", 1.5)
           .selectAll("circle")
           .data(nodes)
-          .join("circle")
-            .attr("fill", d => nodeFill(d))
-            .attr("stroke", d => nodeStroke(d))
-            .attr("r", d => nodeRadius(d))
-            .call(drag(simulation));
+          .join("g")
+          .call(drag(simulation));
         
-        node.on("mouseover", d => {
+        const circle = node.append("circle")
+          .attr("fill", d => nodeFill(d))
+          .attr("stroke", d => nodeStroke(d))
+          .attr("r", d => nodeRadius(d));
+          // .call(drag(simulation));
+          // .join("circle")
+          //   .attr("fill", d => nodeFill(d))
+          //   .attr("stroke", d => nodeStroke(d))
+          //   .attr("r", d => nodeRadius(d))
+          //   .call(drag(simulation));
+        
+        circle.on("click", function(d) {
           if (nodeHoverHandler) {
             nodeHoverHandler(d.data);
           }
+          circle.attr("fill", c => c === d ? "dodgerblue" : nodeFill(c));
         });
 
-        // const label = node.append("text")
-        //   .text(d => d.name)
-        //   .attr("font-family", "sans-serif")
-        //   .attr("font-size", "11px")
-        //   .attr("dy", 15)
-        //   .attr("dx", -15)
-        //   .attr("fill", "#555")
-        //   .attr("stroke", "none");
+        if (showNodeLabels) {
+          const label = node.append("text")
+            .text(d => d.data.name)
+            .attr("font-family", "sans-serif")
+            .attr("font-size", "11px")
+            .attr("text-anchor", "middle")
+            .attr("dy", -8)
+            // .attr("dx", -15)
+            .attr("fill", "#555")
+            .attr("stroke", "none")
+            .attr("pointer-events", "none");
+        }
 
         node.append("title")
-          .text(d => d.data.name);
+          .text(d => d.data.display_name);
 
         simulation.on("tick", () => {
           link.attr("x1", d => d.source.x)
@@ -140,8 +154,11 @@ var forceDirectedGraphChart = function() {
             .attr("x2", d => d.target.x)
             .attr("y2", d => d.target.y);
           
-          node.attr("cx", d => d.x)
-            .attr("cy", d => d.y);
+          node.attr("transform", function(d) {
+            return `translate(${d.x},${d.y})`;
+          });
+          // node.attr("cx", d => d.x)
+          //   .attr("cy", d => d.y);
         });
       }
     }
