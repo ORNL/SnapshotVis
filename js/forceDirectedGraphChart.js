@@ -78,6 +78,36 @@ var forceDirectedGraphChart = function() {
         const links = root.links();
         const nodes = root.descendants();
 
+        // console.log(links);
+
+        let linkedNodes = {};
+
+        function getLinkedNodes(parentNode) {
+          parentNode.children.map(childNode => {
+            if (childNode.children.length === 0) {
+              return;
+            } else {
+              if (childNode.type === "link") {
+                let connections = [parentNode.name, childNode.name];
+                childNode.children.map(grandchildNode => {
+                  connections.push(grandchildNode.name);
+                });
+                connections.map(c1 => {
+                  connections.map(c2 => {
+                    linkedNodes[`${c1},${c2}`] = true;
+                  })
+                });
+              }
+
+              getLinkedNodes(childNode);
+            }
+          });
+        }
+        getLinkedNodes(_chartData);
+        // console.log(linkedNodes);
+
+        const isConnected = (a, b) => linkedNodes[`${a.data.name},${b.data.name}`] || linkedNodes[`${b.data.name},${a.data.name}`] || a === b;
+
         const simulation = d3.forceSimulation(nodes)
           .force("link", d3.forceLink(links).id(d => d.id).distance(10).strength(1))
           .force("charge", d3.forceManyBody().strength(-50))
@@ -147,7 +177,19 @@ var forceDirectedGraphChart = function() {
           if (nodeHoverHandler) {
             nodeHoverHandler(d.data);
           }
-          circle.attr("fill", c => c === d ? selectedFill : nodeFill(c));
+
+          circle.transition(500)
+            .attr("opacity", c => isConnected(c, d) ? 1.0 : 0.1)
+            .attr("fill", c => c === d ? selectedFill : nodeFill(c));
+          // circle.attr("opacity", c => {
+          //   const isConnectedValue = isConnected(c, d);
+          //   if (isConnectedValue) {
+          //     return 1.0;
+          //   }
+          //   return 0.1;
+          // });
+          link.transition(500)
+            .attr("opacity", l => isConnected(l.target, d) ? null : 0.2);
         });
 
         if (showNodeLabels) {
