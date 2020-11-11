@@ -76,15 +76,27 @@ var forceDirectedGraphChart = function() {
           .force("link", d3.forceLink(links).id(d => d.id).distance(10).strength(1))
           .force("charge", d3.forceManyBody().strength(-50))
           .force("x", d3.forceX())
-          .force("y", d3.forceY());
+          .force("y", d3.forceY())
+          .force("center_force", d3.forceCenter(width/2, height/2));
 
         const svg = _chartDiv.append('svg')
           .attr('width', width + margin.left + margin.right)
           .attr('height', height + margin.top + margin.bottom);
         
-        const g = svg.append("g")
-          .attr('transform', `translate(${margin.left + (width / 2)}, ${margin.top + (height / 2)})`);
+        // const g = svg.append("g")
+        //   .attr('transform', `translate(${margin.left + (width / 2)}, ${margin.top + (height / 2)})`);
+        const topG = svg.append("g")
+          .attr("transform", `translate(${margin.left}, ${margin.top})`);
         
+        const g = topG.append("g");
+
+        const zoom = d3.zoom()
+          .on("zoom", () => {
+            g.attr("transform", d3.event.transform);
+          });
+          
+        svg.call(zoom).call(zoom.transform, d3.zoomIdentity);
+
         const link = g.append("g")
           .attr("stroke", "#777")
           .attr("stroke-opacity", 0.6)
