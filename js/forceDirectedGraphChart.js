@@ -5,6 +5,7 @@ var forceDirectedGraphChart = function() {
   let _chartData;
   let _chartDiv;
   let nodeHoverHandler = null;
+  let showNodeLabels = true;
   
   function chart(selection, data) {
     _chartData = data;
@@ -14,7 +15,6 @@ var forceDirectedGraphChart = function() {
   }
 
   drag = simulation => {
-  
     function dragstarted(d) {
       if (!d3.event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
@@ -103,6 +103,7 @@ var forceDirectedGraphChart = function() {
         const nodeRadius = (node) => {
           return node.data.type === "link" || node.data.type === "paper" ? 4 : node.parent ? 6 : 8;
         };
+
         const node = g.append("g")
           .attr("fill", "#fff")
           .attr("stroke", "#000")
@@ -113,22 +114,16 @@ var forceDirectedGraphChart = function() {
             .attr("fill", d => nodeFill(d))
             .attr("stroke", d => nodeStroke(d))
             .attr("r", d => nodeRadius(d))
-            // .attr("fill", d => fillByType(d.data.type))
-            // .attr("stroke", d => d.data.type === "concept" ? null : "#fff")
-            // .attr("fill", d => d.type === 'link' ? 'yellow' : d.type === 'concept' ? 'white' : 'black')
-            // .attr("stroke", d => d.type === 'concept' ? null : "#fff")
-            // .attr("r", d => d.data.type === 'link' ? 5 : d.data.type === "paper" ? 6 : 8)
-            // .attr("fill", d => d.parent ? d.children ? null : "#000" : "skyblue")
-            // .attr("stroke", d => d.children ? null : "#fff")
-            // .attr("r", 5)
             .call(drag(simulation));
         
         node.on("mouseover", d => {
-          // console.log(d);
           if (nodeHoverHandler) {
             nodeHoverHandler(d.data);
           }
         });
+
+        // node.append("text")
+        //   .text(d => d.data.name);
 
         node.append("title")
           .text(d => d.data.name);

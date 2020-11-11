@@ -8,25 +8,28 @@
 
     <style>
       body {
-        font: 12px sans-serif;
+        font: .9rem -apple-system, BlinkMacSystemFont, "avenir next", avenir, helvetica, "helvetica next", ubuntu, roboto, noto, "segoe ui", arial, sans-serif;
+        /* font: 12px sans-serif; */
         margin: 20px 20px 20px 20px;
         /* background: gray; */
         background-color: white;
+        overflow: hidden;
       }
 
       .layout {
         display: grid;
-        grid-template-columns: 1.5fr 3fr 2fr;
+        grid-template-columns: 1.5fr 4fr 2fr;
         grid-gap: 8px;
+        height: 100vh;
       }
 
       .child-input {
-        /* background-color: rgba(0,0,0,0); */
-        /* opacity: 0.2; */
+        overflow-y: scroll;
         min-width: 180px;
       }
 
       .child-info {
+        overflow-y: scroll;
         /* background: lightgray; */
         min-width: 200px;
       }
@@ -52,19 +55,25 @@
   <body>
     <div class="layout">
       <div class="child-input">
-        <label for="typeSelect">Type:</label>
-        <select id="typeSelect" style="max-width: 170px;"></select><br/><br/>
-        <label for="searchInput">Search Concepts:</label>
+        <h3>Filter and Select</h3>
+        <label for="typeSelect">Type:</label><br/>
+        <select id="typeSelect" style="max-width: 180px;"></select><br/><br/>
+        <label for="searchInput" style="max-width: 160px;">Search Concepts:</label><br/>
         <input id="searchInput" type="text"></input><br/>
         <div>
-          <h3>Filtered Concepts:</h3>
-          <strong>(click name to see concept paths)</strong>
+          <h4>Filtered Concepts:</h4>
+          <p>(click name to see concept paths)</p>
           <ul id="conceptList">
           </ul>
         </div>
       </div>
-      <div class="child-chart" id="treeChart"></div>
-      <div class="child-info" id="infoList"></div>
+      <div class="child-chart" id="treeChart">
+        <h3 style="text-align: center;">Graph</h3>
+      </div>
+      <div class="child-info">
+        <h3 style="text-align: center;">Selection Details</h3>
+        <div id="infoList"></div>
+      </div>
     </div>
   </body>
 
@@ -144,7 +153,7 @@
     };
 
     const createTreeChart = (selectedConcept) => {
-      d3.select('#chart').selectAll('*').remove();
+      d3.select('#chart').select('svg').remove();
       d3.select('#infoList').selectAll('*').remove();
       const chartWidth = document.getElementById('treeChart').clientWidth;
 
