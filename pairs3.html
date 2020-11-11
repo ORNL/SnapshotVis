@@ -112,7 +112,7 @@
         // console.log(`searchString: ${searchString}`);
         
         if (nodes) {
-          var re = new RegExp(`\\b${searchString}`, 'gi');
+          var re = new RegExp(`\\b(${searchString})`, 'i');
           const foundNodes = filteredNodeArr.filter(n => {
             return re.test(n.name);
           });
