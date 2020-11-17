@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta author="Chad A. Steed">
+
+    <title>ORNL Snapshot APSP Visualization</title>
+    <script type="text/javascript" src="./js/d3.min.js"></script>
+    <script type="text/javascript" src="./js/d3-array.min.js"></script>
+    <script src="./js/forceDirectedGraphChart.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="./js/Semantic-UI/semantic.min.css">
+
+    <script
+      src="https://code.jquery.com/jquery-3.1.1.min.js"
+      integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+      crossorigin="anonymous">
+    </script>
+    <script src="./js/Semantic-UI/semantic.min.js"></script>
+
+    <style>
+      body {
+        margin: 4px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="ui inverted fixed borderless menu">
+      <div class="ui medium header item">
+        <i class="inverted green crosshairs icon"></i>
+        <div class="content">
+          ORNL &middot; Snapshot
+        </div>
+      </div>
+      <a class="ui item settingsItem">Plot Settings</a>
+      <a class="ui item helpItem">Help</a>
+      <div class="right menu">
+        <div class="ui item">
+          <img class="ui image" src="./img/ornl-logo.png">
+        </div>
+      </div>
+    </div>
+
+    <div class="ui stackable grid" style="padding: 70px 15px 0px;">  
+      <div class="row">
+        <div class="column">
+          <div class="ui stackable three column grid">
+            <div class="four wide column" >
+              <div class="ui secondary segment">
+                <h3>Filter Panel</h3>
+                <form class="ui tiny form">
+                  <div class="field"> 
+                    <label>Filter Concepts by Type:</label>
+                    <select class="ui fluid search dropdown" multiple="" id="conceptTypeSelect">
+                      <option value="">Choose Value</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <div class="ui icon input">
+                      <input type="text" placeholder="Search Concepts..." id="conceptSearchInput">
+                      <i class="search icon"></i>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <h5>Available Concepts:</h5>
+                    <div class="ui teriary segment">
+                      <div class="ui list" id="primaryConceptList" style="overflow-y: scroll; height: 200px">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <h5>Associated Concepts:</h5>
+                    <div class="ui teriary segment">
+                      <div class="ui list" id="secondaryConceptList" style="overflow-y: scroll; height: 200px">
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+            <div class="eight wide column">
+              <div class="ui segment">
+                <h3>Graph Panel</h3>
+                <div id="chart"></div>
+              </div>
+            </div>
+            <div class="four wide column">
+              <div class="ui secondary segment">
+                <h3>Details Panel</h3>
+                <div id="infoList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+
+  <script>
+    var concepts;
+    var papers;
+    var filteredConcepts;
+    var chart;
+    var selectedConcept;
+    const margin = {top: 20, right: 20, bottom: 20, left: 20};
+
+    function makeTree (concept) {
+      let treeData = {
+        name: concept.concept_id,
+        type: 'concept',
+        display_name: concept.name,
+        children: []
+      };
+      concept.paths.map(path => {
+        let currentNode = treeData;
+        path.path.map((currentConceptID, i) => {
+          if (i > 0) {
+            const parentConceptID = path.path[i-1];
+          
+            let linkNode = currentNode.children.find(d => d.name === `${parentConceptID}-${currentConceptID}`);
+            let childNode;
+            if (!linkNode) {
+              childNode = {
+                name: currentConceptID,
+                type: 'concept',
+                display_name: concepts.get(currentConceptID).name,
+                metadata: {
+                  parent_concept_id: parentConceptID,
+                  papers: []
+                },
+                children: []
+              };
+              linkNode = {
+                name: `${parentConceptID}-${currentConceptID}`,
+                display_name: 'link',
+                type: 'link',
+                children: [childNode]
+              };
+              currentNode.children.push(linkNode);
+            } else {
+              childNode = linkNode.children.find(d => d.name === currentConceptID);
+            }
+
+            const linkingEdges = path.edges.filter(e => {
+              return (e.concept_1 === currentConceptID || e.concept_2 === currentConceptID) &&
+                (e.concept_1 === parentConceptID || e.concept_2 === parentConceptID);
+            });
+            
+            linkingEdges.map(e => {
+              linkNode.children.push({
+                name: e.paper,
+                type: 'paper',
+                display_name: papers.get(e.paper).title,
+                metadata: {
+                  concept_1: parentConceptID,
+                  concept_2: currentConceptID,
+                  year: +e.year,
+                  sentence: e.sentence,
+                  count: e.count
+                },
+                children: []
+              });
+              childNode.metadata.papers.push(e.paper);
+            });
+            currentNode = childNode;
+          }
+        });
+      });
+
+      return treeData;
+    };
+
+    function prepData (conceptData, paperData) {
+      papers = new Map(Object.keys(paperData).map(paperKey => {
+        return [paperData[paperKey].id, paperData[paperKey]];
+      }));
+
+      concepts = new Map(Object.keys(conceptData).map(k => {
+        conceptData[k].paths.map(path => {
+          if (path.path[0] !== conceptData[k].concept_id) {
+            path.path.reverse();
+          }
+        });
+        return [conceptData[k].concept_id, conceptData[k]];
+      }));
+
+      concepts.forEach((value, key) => {
+        value.linkTree = makeTree(value);
+      });
+
+      console.log(concepts);
+      console.log(papers);
+    };
+
+    function clearSelectOptions (select) {
+      for (var i = select.options.length - 1; i >= 0; i--) {
+        select.remove(i);
+      }
+    };
+
+    function populateSelect (selectID, options) {
+      const select = document.getElementById(selectID);
+      clearSelectOptions(select);
+      options.map(d => select.options[select.options.length] = new Option(d));
+    };
+
+    function populateConceptTypeSelect () {
+      const typeOptions = [...new Set(d3.merge([...concepts.values()].map(d => d.types.map(t => t.type))))].sort(d3.ascending);
+
+      populateSelect('conceptTypeSelect', typeOptions);
+      filterConceptNodes();
+      populateConceptList("primaryConceptList", filteredConcepts);
+    };
+
+    function filterConceptNodes() {
+      const selectedTypes = $('#conceptTypeSelect').dropdown('get value');
+      if (selectedTypes.length > 0) {
+        filteredConcepts = [...concepts.values()].filter(n => n.types.some(t => selectedTypes.findIndex(s => t.type === s) !== -1)).sort((a,b) => d3.ascending(a.name, b.name));
+      } else {
+        filteredConcepts = [...concepts.values()].sort((a,b) => d3.ascending(a.name, b.name));
+      }
+    }
+
+    function populateConceptNameSelect () {
+      const selectedTypes = $('#conceptTypeSelect').dropdown('get value');
+      if (selectedTypes.length > 0) {
+        nameOptions = [...concepts.values()].filter(n => n.types.some(t => selectedTypes.findIndex(s => t.type === s) !== -1)).map(d => d.name).sort(d3.ascending);
+      } else {
+        nameOptions = [...concepts.values()].map(d => d.name).sort(d3.ascending);
+      }
+      nameOptions.unshift("None");
+
+      populateSelect('conceptNameSelect', nameOptions);
+    };
+
+    function selectConcept(concept_id) {
+      console.log(`selecting concept ${concept_id}`);
+      selectedConcept = concepts.get(concept_id);
+      createTreeChart(selectedConcept);
+
+      console.log(selectedConcept);
+
+      var connectedConceptIDs = d3.merge(selectedConcept.paths.map(p => p.path.slice(1)));
+      console.log(connectedConceptIDs);
+      console.log(concepts);
+      const connectedConcepts = connectedConceptIDs.map(d => concepts.get(d));
+      console.log(connectedConcepts);
+
+      populateConceptList("secondaryConceptList", connectedConcepts);
+    }
+
+    function populateConceptList(conceptListID, conceptNodes) {
+      console.log(conceptNodes);
+      d3.select(`#${conceptListID}`).selectAll('*').remove();
+      d3.select(`#${conceptListID}`)
+        .selectAll("div")
+        .data(conceptNodes)
+        .join("div")
+          .append("a")
+          .attr("class", "item")
+          .html(d => d.name)
+          .attr("href", "#")
+          .on("click", d => selectConcept(d.concept_id));
+    }
+
+    function handleNodeSelected (nodeInfo) {
+      console.log(nodeInfo);
+    }
+
+    function createTreeChart (selectedConcept) {
+      d3.select('#chart').select('svg').remove();
+      // d3.select('#infoList').selectAll('*').remove();
+      const chartWidth = document.getElementById('chart').clientWidth;
+
+      if (concepts) {
+        if (selectedConcept) {
+          chart = forceDirectedGraphChart()
+            .nodeHoverHandler(handleNodeSelected)
+            .width(chartWidth)
+            .height(800)
+            .margin(margin);
+          d3.select('#chart').call(chart, selectedConcept.linkTree);
+        }
+      }
+    }
+
+    document.getElementById('conceptSearchInput').addEventListener('input',
+      () => {
+        const searchString = document.getElementById('conceptSearchInput').value;
+        console.log(`searchString: ${searchString}`);
+        if (concepts) {
+          var re = new RegExp(`\\b(${searchString})`, 'i');
+          const foundNodes = filteredConcepts.filter(n => {
+            return re.test(n.name);
+          });
+          foundNodes.sort((a,b) => d3.ascending(a.name, b.name));
+          populateConceptList("primaryConceptList", foundNodes);
+        }
+      })
+
+    $('#conceptTypeSelect').dropdown({
+      onChange: function(value, text, $selectedItem) {
+        filterConceptNodes();
+        document.getElementById('conceptSearchInput').value = "";
+        populateConceptList("primaryConceptList", filteredConcepts);
+      },
+      placeholder: "Select Types"
+    });
+
+    d3.json('./data/2020/papers.json')
+      .then(paperData => {
+        d3.json("./data/2020/concepts.json")
+          .then(conceptData => {
+            prepData(conceptData, paperData);
+            populateConceptTypeSelect();
+          })
+          .catch(error => { console.log(error); });
+      })
+      .catch(error => { console.log(error); });     
+  </script>
+</html>
