@@ -72,7 +72,7 @@
                   </div>
                   <h4 class="ui dividing header">
                     <div class="content">
-                      Concepts Concepts:
+                      Concepts:
                       <div class="sub header">Select a concept to show path(s)</div>
                     </div>
                   </h4>
@@ -286,7 +286,7 @@
 
       // populateConceptList("secondaryConceptList", connectedConcepts);
 
-      const associatedConceptOptions = connectedConcepts.map(d => d.name);
+      const associatedConceptOptions = connectedConcepts.map(d => d.name).sort(d3.ascending);
       associatedConceptOptions.unshift("None");
       populateSelect('associatedConceptsSelect', associatedConceptOptions);
 
