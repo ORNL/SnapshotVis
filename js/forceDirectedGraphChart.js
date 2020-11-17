@@ -205,8 +205,6 @@ var forceDirectedGraphChart = function() {
           return [d.data.name];
         }
       }));
-      // console.log(path);
-      // console.log(root);
       circle.transition(500)
         .attr("opacity", c => path.includes(c.data.name) ? 1.0 : 0.1)
         // .attr("opacity", c => c.data.name === conceptName ? 1.0 : 0.1)
@@ -214,74 +212,11 @@ var forceDirectedGraphChart = function() {
       link.transition(500)
         .attr("opacity", l => path.includes(l.target.data.name) && path.includes(l.source.data.name) ? null : 0.3);
     }
-    // if (highlightedConceptName) {
-    //   let target = root.descendants().find(d => d.data.name === highlightedConceptName);
-    //   let path = d3.merge(root.path(target).map(d => {
-    //     if (d.data.type === "link") {
-    //       let ids = [d.data.name];
-    //       d.data.children.map(c => {
-    //         if (c.type === "paper" || c.type === "concept") {
-    //           ids.push(c.name);
-    //         }
-    //       });
-    //       return ids;
-    //     } else {
-    //       return [d.data.name];
-    //     }
-    //   }));
-    //   // console.log(path);
-    //   // console.log(root);
-    //   circle.transition(500)
-    //     .attr("opacity", c => path.includes(c.data.name) ? 1.0 : 0.1)
-    //     // .attr("opacity", c => c.data.name === conceptName ? 1.0 : 0.1)
-    //     .attr("fill", c => c.data.name === highlightedConceptName ? selectedFill : nodeFill(c));
-    //   link.transition(500)
-    //     .attr("opacity", l => path.includes(l.target.data.name) && path.includes(l.source.data.name) ? null : 0.3);
-    // } else {
-    //   circle.transition(500)
-    //     .attr("opacity", 1.0)
-    //     .attr("fill", c => nodeFill(c));
-    //   link.transition(500)
-    //     .attr("opacity", null);
-    // }
   }
 
   chart.highlightRootPathToConcept = function(conceptName) {
     console.log(conceptName);
     shadeGraph(conceptName);
-    // if (conceptName) {
-    //   console.log(root.descendants());
-    //   let target = root.descendants().find(d => d.data.name === conceptName);
-    //   console.log(target);
-    //   // let path = root.path(target).map(d => d.data.name);
-    //   let path = d3.merge(root.path(target).map(d => {
-    //     if (d.data.type === "link") {
-    //       let ids = [d.data.name];
-    //       d.data.children.map(c => {
-    //         if (c.type === "paper") {
-    //           ids.push(c.name);
-    //         }
-    //       });
-    //       return ids;
-    //     } else {
-    //       return [d.data.name];
-    //     }
-    //   }));
-    //   console.log(path);
-    //   console.log(root);
-    //   circle.transition(500)
-    //     .attr("opacity", c => path.includes(c.data.name) ? 1.0 : 0.1)
-    //     // .attr("opacity", c => c.data.name === conceptName ? 1.0 : 0.1)
-    //     .attr("fill", c => c.data.name === conceptName ? selectedFill : nodeFill(c));
-    //   link.transition(500)
-    //     .attr("opacity", l => path.includes(l.target.data.name) && path.includes(l.source.data.name) ? null : 0.3);
-    // } else {
-    //   circle.transition(500)
-    //     .attr("opacity", 1.0)
-    //     .attr("fill", c => nodeFill(c));
-    //   link.transition(500)
-    //     .attr("opacity", null);
-    // }
     return chart;
   };
 

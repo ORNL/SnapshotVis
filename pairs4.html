@@ -42,6 +42,9 @@
       <a class="ui item helpItem">Help</a>
       <div class="right menu">
         <div class="ui item">
+          <img class="ui image" src="./img/vista-logo.png" height="40px">
+        </div>
+        <div class="ui item">
           <img class="ui image" src="./img/ornl-logo.png">
         </div>
       </div>
@@ -55,13 +58,25 @@
               <div class="ui secondary segment">
                 <h3>Filter Panel</h3>
                 <form class="ui tiny form">
+                  <h4 class="ui dividing header">
+                    <div class="content">
+                      Concept Type Filter:
+                      <div class="sub header">Select a type to filter concepts</div>
+                    </div>
+                  </h4>
                   <div class="field"> 
-                    <label>Filter Concepts by Type:</label>
+                    <!-- <label>Filter Concepts by Type:</label> -->
                     <select class="ui fluid search dropdown" multiple="" id="conceptTypeSelect">
                       <option value="">Choose Types</option>
                     </select>
                   </div>
-                  <h4 class="ui dividing header">Concepts:</h4>
+                  <h4 class="ui dividing header">
+                    <div class="content">
+                      Concepts Concepts:
+                      <div class="sub header">Select a concept to show path(s)</div>
+                    </div>
+                  </h4>
+                  <!-- <h4 class="ui dividing header">Concepts:</h4> -->
                   <div class="field">
                     <div class="ui icon input">
                       <input type="text" placeholder="Search Concepts..." id="conceptSearchInput">
@@ -75,29 +90,46 @@
                       </div>
                     </div>
                   </div>
-                  <h4 class="ui dividing header">Associated Concepts:</h4>
+                  <h4 class="ui dividing header">
+                    <div class="content">
+                      Associated Concepts:
+                      <div class="sub header">Select an associated concept to highlight path</div>
+                    </div>
+                  </h4>
                   <div class="field">
+                    <select class="ui fluid search dropdown" id="associatedConceptsSelect">
+                      <option value="">Choose Concept</option>
+                    </select>
                     <!-- <h5>Associated Concepts:</h5> -->
-                    <div class="ui teriary segment">
+                    <!-- <div class="ui teriary segment">
                       <div class="ui list" id="secondaryConceptList" style="overflow-y: scroll; height: 200px">
                       </div>
-                    </div>
+                    </div> -->
                   </div>
                 </form>
               </div>
             </div>
             <div class="eight wide column">
               <div class="ui segment">
-                <h3>Graph Panel</h3>
-                <select class="ui fluid search dropdown" id="associatedConceptsSelect">
-                  <option value="">Choose Concept</option>
-                </select>
+                <h3 class="ui header">
+                  <i class="snowflake outline icon"></i>
+                  <div class="content">
+                    Graph Panel
+                    <div class="sub header" id="rootConceptNameElement">Root Concept Node Name</div>
+                  </div>
+                </h3>
                 <div id="chart"></div>
               </div>
             </div>
             <div class="four wide column">
               <div class="ui secondary segment">
-                <h3>Details Panel</h3>
+                <h3 class="ui header">
+                  <i class="list alternate outline icon"></i>
+                  <div class="content">
+                    Details Panel
+                    <div class="sub header">Information about selections appear here</div>
+                  </div>
+                </h3>
                 <div id="detailsList" style="overflow-y: scroll; height: 100vh;"></div>
               </div>
             </div>
@@ -252,11 +284,16 @@
       var connectedConceptIDs = d3.merge(selectedConcept.paths.map(p => p.path.slice(1)));
       const connectedConcepts = connectedConceptIDs.map(d => concepts.get(d));
 
-      populateConceptList("secondaryConceptList", connectedConcepts);
+      // populateConceptList("secondaryConceptList", connectedConcepts);
 
       const associatedConceptOptions = connectedConcepts.map(d => d.name);
       associatedConceptOptions.unshift("None");
       populateSelect('associatedConceptsSelect', associatedConceptOptions);
+
+      handleNodeSelected({name: selectedConcept.concept_id, type: "concept"});
+
+      d3.select("#rootConceptNameElement")
+        .html(`Root Concept: "${selectedConcept.name}"`);
     }
 
     function populateConceptList(conceptListID, conceptNodes) {
@@ -339,17 +376,23 @@
         if (concept.name === selectedConcept.name) {
           const directConcepts = concept.paths.map(p => concepts.get(p.path[1]));
           const hypothesizedConcepts = d3.merge(concept.paths.map(p => p.path.length > 2 ? p.path.slice(2) : null).filter(d => d !== null)).map(d => concepts.get(d));
+
           // selected the root concept
           d3.select("#detailsList").append("h3").html("Selected Concept (Root)");
           d3.select("#detailsList").append("p").html(formatConceptHTML(concept));
+          d3.select("#detailsList").append("h4").html("Hypothesized Concept Links");
+          if (hypothesizedConcepts.length > 0) {
+            hypothesizedConcepts.map(c => {
+              d3.select("#detailsList").append("p").html(formatConceptHTML(c));
+            });
+          } else {
+            d3.select("#detailsList").append("p").html("None");
+          }
           d3.select("#detailsList").append("h4").html("Direct Concept Links");
           directConcepts.map(c => {
             d3.select("#detailsList").append("p").html(formatConceptHTML(c));
           });
-          d3.select("#detailsList").append("h4").html("Hypothesized Concept Links");
-          hypothesizedConcepts.map(c => {
-            d3.select("#detailsList").append("p").html(formatConceptHTML(c));
-          });
+          
         } else {
           // selected a non-root concept
           const pathIdx = selectedConcept.paths.findIndex(p => {
@@ -368,10 +411,6 @@
 
           d3.select("#detailsList").append("h3").html("Selected Concept");
           d3.select("#detailsList").append("p").html(formatConceptHTML(concept));
-          d3.select("#detailsList").append("h4").html("Direct Concept Links");
-          directConcepts.map(c => {
-            d3.select("#detailsList").append("p").html(formatConceptHTML(c));
-          });
           d3.select("#detailsList").append("h4").html("Hypothesized Concept Links");
           if (hypothesizedConcepts.length > 0) {
             hypothesizedConcepts.map(c => {
@@ -380,6 +419,11 @@
           } else {
             d3.select("#detailsList").append("p").html("None");
           }
+          d3.select("#detailsList").append("h4").html("Direct Concept Links");
+          directConcepts.map(c => {
+            d3.select("#detailsList").append("p").html(formatConceptHTML(c));
+          });
+          
         }
       }
     }
@@ -435,6 +479,7 @@
         if (text !== 'None') {
           const concept = [...concepts.values()].find(d => d.name === text);
           chart.highlightRootPathToConcept(concept.concept_id);
+          handleNodeSelected({name: concept.concept_id, type: "concept"});
         } else {
           chart.highlightRootPathToConcept(null);
         }
