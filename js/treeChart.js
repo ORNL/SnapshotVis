@@ -72,7 +72,7 @@ var treeChart = function() {
           .attr('dy', '0.31em')
           .attr('x', d => d.children ? -6 : 6)
           .attr('text-anchor', d => d.children ? 'end' : 'start')
-          .text(d => d.data.longName)
+          .text(d => d.data.longName ? d.data.longName : d.data.display_name)
           // .text(d => nodes.get(d.data.name).name)
         .clone(true).lower()
           .attr('stroke', 'white');

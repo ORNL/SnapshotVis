@@ -13,6 +13,9 @@ var forceDirectedGraphChart = function() {
   let selectedFill = "deepskyblue";
   let linkFill = "#999";
   let unselectedPathOpacity = 0.2;
+  let link;
+  let circle;
+  let root;
   
   function chart(selection, data) {
     _chartData = data;
@@ -45,40 +48,14 @@ var forceDirectedGraphChart = function() {
         .on("end", dragended);
   };
 
-  // const drag = simulation => {
-  //   function dragstarted(event, d) {
-  //     if (!event.active) simulation.alphaTarget(0.3).restart();
-  //     d.fx = d.x;
-  //     d.fy = d.y;
-  //   }
-    
-  //   function dragged(event, d) {
-  //     d.fx = event.x;
-  //     d.fy = event.y;
-  //   }
-    
-  //   function dragended(event, d) {
-  //     if (!event.active) simulation.alphaTarget(0);
-  //     d.fx = null;
-  //     d.fy = null;
-  //   }
-    
-  //   return d3.drag()
-  //       .on("start", dragstarted)
-  //       .on("drag", dragged)
-  //       .on("end", dragended);
-  // };
-
   function drawChart() {
     if (_chartDiv) {
       _chartDiv.selectAll('*').remove();
 
       if (_chartData) {
-        const root = d3.hierarchy(_chartData);
+        root = d3.hierarchy(_chartData);
         const links = root.links();
         const nodes = root.descendants();
-
-        // console.log(links);
 
         let linkedNodes = {};
 
@@ -103,8 +80,8 @@ var forceDirectedGraphChart = function() {
             }
           });
         }
+
         getLinkedNodes(_chartData);
-        // console.log(linkedNodes);
 
         const isConnected = (a, b) => linkedNodes[`${a.data.name},${b.data.name}`] || linkedNodes[`${b.data.name},${a.data.name}`] || a === b;
 
@@ -119,8 +96,6 @@ var forceDirectedGraphChart = function() {
           .attr('width', width + margin.left + margin.right)
           .attr('height', height + margin.top + margin.bottom);
         
-        // const g = svg.append("g")
-        //   .attr('transform', `translate(${margin.left + (width / 2)}, ${margin.top + (height / 2)})`);
         const topG = svg.append("g")
           .attr("transform", `translate(${margin.left}, ${margin.top})`);
         
@@ -133,25 +108,12 @@ var forceDirectedGraphChart = function() {
           
         svg.call(zoom).call(zoom.transform, d3.zoomIdentity);
 
-        const link = g.append("g")
+        link = g.append("g")
           .attr("stroke", "#777")
           .attr("stroke-opacity", 0.3)
           .selectAll("line")
           .data(links)
           .join("line");
-
-        const nodeFill = (node) => {
-          return node.data.type === "concept" ? node.parent ? conceptFill : rootFill : node.data.type === "paper" ? paperFill : linkFill;
-          // if (type === 'link') { return '#aaa'; }
-          // if (type === 'concept') { return '#fff'; }
-          // if (type === 'paper') { return "#000"; }
-        };
-        const nodeStroke = (node) => {
-          return node.data.type === "concept" ? null : "#fff";
-        };
-        const nodeRadius = (node) => {
-          return node.data.type === "link" || node.data.type === "paper" ? 4 : node.parent ? 6 : 8;
-        };
 
         const node = g.append("g")
           .attr("fill", "#fff")
@@ -162,34 +124,22 @@ var forceDirectedGraphChart = function() {
           .join("g")
           .call(drag(simulation));
         
-        const circle = node.append("circle")
+        circle = node.append("circle")
           .attr("fill", d => nodeFill(d))
           .attr("stroke", d => nodeStroke(d))
           .attr("r", d => nodeRadius(d));
-          // .call(drag(simulation));
-          // .join("circle")
-          //   .attr("fill", d => nodeFill(d))
-          //   .attr("stroke", d => nodeStroke(d))
-          //   .attr("r", d => nodeRadius(d))
-          //   .call(drag(simulation));
         
         circle.on("click", function(d) {
           if (nodeHoverHandler) {
             nodeHoverHandler(d.data);
           }
 
-          circle.transition(500)
-            .attr("opacity", c => isConnected(c, d) ? 1.0 : 0.1)
-            .attr("fill", c => c === d ? selectedFill : nodeFill(c));
-          // circle.attr("opacity", c => {
-          //   const isConnectedValue = isConnected(c, d);
-          //   if (isConnectedValue) {
-          //     return 1.0;
-          //   }
-          //   return 0.1;
-          // });
-          link.transition(500)
-            .attr("opacity", l => isConnected(l.target, d) ? null : 0.2);
+          shadeGraph(d.data.name);
+          // circle.transition(500)
+          //   .attr("opacity", c => isConnected(c, d) ? 1.0 : 0.1)
+          //   .attr("fill", c => c === d ? selectedFill : nodeFill(c));
+          // link.transition(500)
+          //   .attr("opacity", l => isConnected(l.target, d) && isConnected(l.source, d) ? null : 0.2);
         });
 
         if (showNodeLabels) {
@@ -199,7 +149,6 @@ var forceDirectedGraphChart = function() {
             .attr("font-size", "11px")
             .attr("text-anchor", "middle")
             .attr("dy", -8)
-            // .attr("dx", -15)
             .attr("fill", "#555")
             .attr("stroke", "none")
             .attr("pointer-events", "none");
@@ -217,12 +166,124 @@ var forceDirectedGraphChart = function() {
           node.attr("transform", function(d) {
             return `translate(${d.x},${d.y})`;
           });
-          // node.attr("cx", d => d.x)
-          //   .attr("cy", d => d.y);
         });
       }
     }
   }
+
+  function nodeFill (node) {
+    return node.data.type === "concept" ? node.parent ? conceptFill : rootFill : node.data.type === "paper" ? paperFill : linkFill;
+  }
+
+  function nodeStroke (node) {
+    return node.data.type === "concept" ? null : "#fff";
+  }
+
+  function nodeRadius (node) {
+    return node.data.type === "link" || node.data.type === "paper" ? 4 : node.parent ? 6 : 8;
+  }
+
+  function shadeGraph(highlightedConceptName) {
+    if (highlightedConceptName === null || highlightedConceptName === root.data.name) {
+      circle.transition(500)
+        .attr("opacity", 1.0)
+        .attr("fill", c => nodeFill(c));
+      link.transition(500)
+        .attr("opacity", null);
+    } else {
+      let target = root.descendants().find(d => d.data.name === highlightedConceptName);
+      let path = d3.merge(root.path(target).map(d => {
+        if (d.data.type === "link") {
+          let ids = [d.data.name];
+          d.data.children.map(c => {
+            if (c.type === "paper" || c.type === "concept") {
+              ids.push(c.name);
+            }
+          });
+          return ids;
+        } else {
+          return [d.data.name];
+        }
+      }));
+      // console.log(path);
+      // console.log(root);
+      circle.transition(500)
+        .attr("opacity", c => path.includes(c.data.name) ? 1.0 : 0.1)
+        // .attr("opacity", c => c.data.name === conceptName ? 1.0 : 0.1)
+        .attr("fill", c => c.data.name === highlightedConceptName ? selectedFill : nodeFill(c));
+      link.transition(500)
+        .attr("opacity", l => path.includes(l.target.data.name) && path.includes(l.source.data.name) ? null : 0.3);
+    }
+    // if (highlightedConceptName) {
+    //   let target = root.descendants().find(d => d.data.name === highlightedConceptName);
+    //   let path = d3.merge(root.path(target).map(d => {
+    //     if (d.data.type === "link") {
+    //       let ids = [d.data.name];
+    //       d.data.children.map(c => {
+    //         if (c.type === "paper" || c.type === "concept") {
+    //           ids.push(c.name);
+    //         }
+    //       });
+    //       return ids;
+    //     } else {
+    //       return [d.data.name];
+    //     }
+    //   }));
+    //   // console.log(path);
+    //   // console.log(root);
+    //   circle.transition(500)
+    //     .attr("opacity", c => path.includes(c.data.name) ? 1.0 : 0.1)
+    //     // .attr("opacity", c => c.data.name === conceptName ? 1.0 : 0.1)
+    //     .attr("fill", c => c.data.name === highlightedConceptName ? selectedFill : nodeFill(c));
+    //   link.transition(500)
+    //     .attr("opacity", l => path.includes(l.target.data.name) && path.includes(l.source.data.name) ? null : 0.3);
+    // } else {
+    //   circle.transition(500)
+    //     .attr("opacity", 1.0)
+    //     .attr("fill", c => nodeFill(c));
+    //   link.transition(500)
+    //     .attr("opacity", null);
+    // }
+  }
+
+  chart.highlightRootPathToConcept = function(conceptName) {
+    console.log(conceptName);
+    shadeGraph(conceptName);
+    // if (conceptName) {
+    //   console.log(root.descendants());
+    //   let target = root.descendants().find(d => d.data.name === conceptName);
+    //   console.log(target);
+    //   // let path = root.path(target).map(d => d.data.name);
+    //   let path = d3.merge(root.path(target).map(d => {
+    //     if (d.data.type === "link") {
+    //       let ids = [d.data.name];
+    //       d.data.children.map(c => {
+    //         if (c.type === "paper") {
+    //           ids.push(c.name);
+    //         }
+    //       });
+    //       return ids;
+    //     } else {
+    //       return [d.data.name];
+    //     }
+    //   }));
+    //   console.log(path);
+    //   console.log(root);
+    //   circle.transition(500)
+    //     .attr("opacity", c => path.includes(c.data.name) ? 1.0 : 0.1)
+    //     // .attr("opacity", c => c.data.name === conceptName ? 1.0 : 0.1)
+    //     .attr("fill", c => c.data.name === conceptName ? selectedFill : nodeFill(c));
+    //   link.transition(500)
+    //     .attr("opacity", l => path.includes(l.target.data.name) && path.includes(l.source.data.name) ? null : 0.3);
+    // } else {
+    //   circle.transition(500)
+    //     .attr("opacity", 1.0)
+    //     .attr("fill", c => nodeFill(c));
+    //   link.transition(500)
+    //     .attr("opacity", null);
+    // }
+    return chart;
+  };
 
   chart.margin = function(value) {
     if (!arguments.length) {

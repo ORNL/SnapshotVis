@@ -9,6 +9,7 @@
     <script type="text/javascript" src="./js/d3.min.js"></script>
     <script type="text/javascript" src="./js/d3-array.min.js"></script>
     <script src="./js/forceDirectedGraphChart.js"></script>
+    <script src="./js/treeChart.js"></script>
 
     <link rel="stylesheet" type="text/css" href="./js/Semantic-UI/semantic.min.css">
 
@@ -22,6 +23,9 @@
     <style>
       body {
         margin: 4px;
+      }
+      body > .grid {
+        height: 100%;
       }
     </style>
   </head>
@@ -45,7 +49,7 @@
 
     <div class="ui stackable grid" style="padding: 70px 15px 0px;">  
       <div class="row">
-        <div class="column">
+        <div class="column" style="height: 100%;">
           <div class="ui stackable three column grid">
             <div class="four wide column" >
               <div class="ui secondary segment">
@@ -54,9 +58,10 @@
                   <div class="field"> 
                     <label>Filter Concepts by Type:</label>
                     <select class="ui fluid search dropdown" multiple="" id="conceptTypeSelect">
-                      <option value="">Choose Value</option>
+                      <option value="">Choose Types</option>
                     </select>
                   </div>
+                  <h4 class="ui dividing header">Concepts:</h4>
                   <div class="field">
                     <div class="ui icon input">
                       <input type="text" placeholder="Search Concepts..." id="conceptSearchInput">
@@ -64,14 +69,15 @@
                     </div>
                   </div>
                   <div class="field">
-                    <h5>Available Concepts:</h5>
+                    <!-- <h5>Available Concepts:</h5> -->
                     <div class="ui teriary segment">
                       <div class="ui list" id="primaryConceptList" style="overflow-y: scroll; height: 200px">
                       </div>
                     </div>
                   </div>
+                  <h4 class="ui dividing header">Associated Concepts:</h4>
                   <div class="field">
-                    <h5>Associated Concepts:</h5>
+                    <!-- <h5>Associated Concepts:</h5> -->
                     <div class="ui teriary segment">
                       <div class="ui list" id="secondaryConceptList" style="overflow-y: scroll; height: 200px">
                       </div>
@@ -83,13 +89,16 @@
             <div class="eight wide column">
               <div class="ui segment">
                 <h3>Graph Panel</h3>
+                <select class="ui fluid search dropdown" id="associatedConceptsSelect">
+                  <option value="">Choose Concept</option>
+                </select>
                 <div id="chart"></div>
               </div>
             </div>
             <div class="four wide column">
               <div class="ui secondary segment">
                 <h3>Details Panel</h3>
-                <div id="infoList"></div>
+                <div id="detailsList" style="overflow-y: scroll; height: 100vh;"></div>
               </div>
             </div>
           </div>
@@ -240,15 +249,14 @@
       selectedConcept = concepts.get(concept_id);
       createTreeChart(selectedConcept);
 
-      console.log(selectedConcept);
-
       var connectedConceptIDs = d3.merge(selectedConcept.paths.map(p => p.path.slice(1)));
-      console.log(connectedConceptIDs);
-      console.log(concepts);
       const connectedConcepts = connectedConceptIDs.map(d => concepts.get(d));
-      console.log(connectedConcepts);
 
       populateConceptList("secondaryConceptList", connectedConcepts);
+
+      const associatedConceptOptions = connectedConcepts.map(d => d.name);
+      associatedConceptOptions.unshift("None");
+      populateSelect('associatedConceptsSelect', associatedConceptOptions);
     }
 
     function populateConceptList(conceptListID, conceptNodes) {
@@ -265,17 +273,129 @@
           .on("click", d => selectConcept(d.concept_id));
     }
 
+    function formatConceptTypes (concept) {
+      let typesStr = "";
+      concept.types.map((t, i) => {
+        typesStr += t.type;
+        if (i + 1 < concept.types.length) {
+          typesStr += "; ";
+        }
+      });
+      return typesStr;
+    }
+
+    function formatPaperHTML (paper, sentence, count) {
+      let htmlStr = `<u>Title</u>: ${paper.title}<br/><u>ID</u>: ${paper.id}<br/><u>Year</u>: ${paper.year}<br/>`;
+      if (sentence) {
+        htmlStr += `<u>Sentence</u>: ${sentence}<br/>`;
+      }
+      if (count) {
+        htmlStr += `<u>Count</u>: ${count}<br/>`;
+      }
+      htmlStr += `<u>URL</u>: <a href=${paper.url} target="_blank">${paper.url}</a>`;
+      return htmlStr;
+    }
+
+    function formatConceptHTML (concept) {
+      return `<u>Name</u>: ${concept.name}<br\><u>ID</u>: ${concept.concept_id}<br/>
+        <u>Types</u>: ${formatConceptTypes(concept)}`;
+    }
+
     function handleNodeSelected (nodeInfo) {
       console.log(nodeInfo);
+      d3.select("#detailsList").selectAll("*").remove();
+
+      if (nodeInfo.type === "paper") {
+        const c1 = concepts.get(nodeInfo.metadata.concept_1);
+        const c2 = concepts.get(nodeInfo.metadata.concept_2);
+        const paper = papers.get(nodeInfo.name);
+
+        d3.select("#detailsList").append("h3").html("Selected Paper:");
+        d3.select('#detailsList').append('p').html(formatPaperHTML(paper, nodeInfo.metadata.sentence, nodeInfo.metadata.count));
+        d3.select('#detailsList').append('h3').html('Linked Concepts:')
+        d3.select('#detailsList').append('strong').html(`Concept 1:`);
+        d3.select('#detailsList').append('p').html(formatConceptHTML(c1));
+        d3.select('#detailsList').append('strong').html(`Concept 2:`);
+        d3.select('#detailsList').append('p').html(formatConceptHTML(c2));
+      } else if (nodeInfo.type === "link") {
+        const c1Id = nodeInfo.name.slice(0, nodeInfo.name.indexOf("-"));
+        const c2Id = nodeInfo.name.slice(nodeInfo.name.indexOf("-") + 1);
+        const c1 = concepts.get(c1Id);
+        const c2 = concepts.get(c2Id);
+        const linkingPapers = nodeInfo.children.map(c => c.type === "paper" ? papers.get(c.name) : null).filter(d => d !== null);
+
+        d3.select("#detailsList").append("h3").html("Selected Link:");
+        d3.select('#detailsList').append('h4').html(`Concept 1:`);
+        d3.select('#detailsList').append('p').html(formatConceptHTML(c1));
+        d3.select('#detailsList').append('h4').html(`Concept 2:`);
+        d3.select('#detailsList').append('p').html(formatConceptHTML(c2));
+        d3.select("#detailsList").append("h4").html("Papers That Link Concepts:");
+        linkingPapers.map(p => {
+          d3.select("#detailsList").append("p").html(formatPaperHTML(p, null, null));
+        });
+      } else if (nodeInfo.type === "concept") {
+        const concept = concepts.get(nodeInfo.name);
+
+        if (concept.name === selectedConcept.name) {
+          const directConcepts = concept.paths.map(p => concepts.get(p.path[1]));
+          const hypothesizedConcepts = d3.merge(concept.paths.map(p => p.path.length > 2 ? p.path.slice(2) : null).filter(d => d !== null)).map(d => concepts.get(d));
+          // selected the root concept
+          d3.select("#detailsList").append("h3").html("Selected Concept (Root)");
+          d3.select("#detailsList").append("p").html(formatConceptHTML(concept));
+          d3.select("#detailsList").append("h4").html("Direct Concept Links");
+          directConcepts.map(c => {
+            d3.select("#detailsList").append("p").html(formatConceptHTML(c));
+          });
+          d3.select("#detailsList").append("h4").html("Hypothesized Concept Links");
+          hypothesizedConcepts.map(c => {
+            d3.select("#detailsList").append("p").html(formatConceptHTML(c));
+          });
+        } else {
+          // selected a non-root concept
+          const pathIdx = selectedConcept.paths.findIndex(p => {
+            return p.path.slice(1).includes(concept.concept_id);
+          });
+          var directConcepts = [];
+          var hypothesizedConcepts = [];
+          const conceptIdx = selectedConcept.paths[pathIdx].path.findIndex(d => d === concept.concept_id);
+          selectedConcept.paths[pathIdx].path.forEach((d,i) => {
+            if ((i === conceptIdx - 1) || (i === conceptIdx + 1)) {
+              directConcepts.push(concepts.get(d));
+            } else if (i !== conceptIdx) {
+              hypothesizedConcepts.push(concepts.get(d));
+            }
+          });
+
+          d3.select("#detailsList").append("h3").html("Selected Concept");
+          d3.select("#detailsList").append("p").html(formatConceptHTML(concept));
+          d3.select("#detailsList").append("h4").html("Direct Concept Links");
+          directConcepts.map(c => {
+            d3.select("#detailsList").append("p").html(formatConceptHTML(c));
+          });
+          d3.select("#detailsList").append("h4").html("Hypothesized Concept Links");
+          if (hypothesizedConcepts.length > 0) {
+            hypothesizedConcepts.map(c => {
+              d3.select("#detailsList").append("p").html(formatConceptHTML(c));
+            });
+          } else {
+            d3.select("#detailsList").append("p").html("None");
+          }
+        }
+      }
     }
 
     function createTreeChart (selectedConcept) {
       d3.select('#chart').select('svg').remove();
-      // d3.select('#infoList').selectAll('*').remove();
+      d3.select('#detailsList').selectAll('*').remove();
       const chartWidth = document.getElementById('chart').clientWidth;
 
       if (concepts) {
         if (selectedConcept) {
+          // chart = treeChart()
+          //   // .nodeHoverHandler(handleNodeSelected)
+          //   .width(chartWidth)
+          //   .height(800)
+          //   .margin(margin);
           chart = forceDirectedGraphChart()
             .nodeHoverHandler(handleNodeSelected)
             .width(chartWidth)
@@ -307,6 +427,19 @@
         populateConceptList("primaryConceptList", filteredConcepts);
       },
       placeholder: "Select Types"
+    });
+
+    $("#associatedConceptsSelect").dropdown({
+      onChange: function(value, text, $selectedItem) {
+        console.log(`value: ${value}  text: ${text}, ${$selectedItem}`);
+        if (text !== 'None') {
+          const concept = [...concepts.values()].find(d => d.name === text);
+          chart.highlightRootPathToConcept(concept.concept_id);
+        } else {
+          chart.highlightRootPathToConcept(null);
+        }
+      },
+      placeholder: "Highlight Concept Path"
     });
 
     d3.json('./data/2020/papers.json')
