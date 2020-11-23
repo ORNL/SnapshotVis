@@ -24,16 +24,13 @@
       body {
         margin: 4px;
       }
-      body > .grid {
-        height: 100%;
-      }
     </style>
   </head>
 
   <body>
     <div class="ui inverted fixed borderless menu">
       <div class="ui medium header item">
-        <i class="inverted green crosshairs icon"></i>
+        <i class="inverted orange lightbulb outline icon"></i>
         <div class="content">
           ORNL &middot; Snapshot
         </div>
@@ -55,8 +52,14 @@
         <div class="column" style="height: 100%;">
           <div class="ui stackable three column grid">
             <div class="four wide column" >
-              <div class="ui secondary segment">
-                <h3>Filter Panel</h3>
+              <div class="ui secondary segment" style="overflow-y: auto; height: calc(100vh - 70px - 2rem)">
+                <h3 class="ui header">
+                  <i class="filter icon"></i>
+                  <div class="content">
+                    Filter Panel
+                    <div class="sub header">Filter and Select Concepts</div>
+                  </div>
+                </h3>
                 <form class="ui tiny form">
                   <h4 class="ui dividing header">
                     <div class="content">
@@ -86,7 +89,7 @@
                   <div class="field">
                     <!-- <h5>Available Concepts:</h5> -->
                     <div class="ui teriary segment">
-                      <div class="ui list" id="primaryConceptList" style="overflow-y: scroll; height: 200px">
+                      <div class="ui list" id="primaryConceptList" style="overflow-y: scroll; height: 300px">
                       </div>
                     </div>
                   </div>
@@ -110,27 +113,27 @@
               </div>
             </div>
             <div class="eight wide column">
-              <div class="ui segment">
+              <div class="ui segment" style="overflow-y: auto; height: calc(100vh - 70px - 2rem)">
                 <h3 class="ui header">
                   <i class="snowflake outline icon"></i>
                   <div class="content">
                     Graph Panel
-                    <div class="sub header" id="rootConceptNameElement">Root Concept Node Name</div>
+                    <div class="sub header" id="rootConceptNameElement">Root Concept Association Graph</div>
                   </div>
                 </h3>
                 <div id="chart"></div>
               </div>
             </div>
             <div class="four wide column">
-              <div class="ui secondary segment">
+              <div class="ui secondary segment" style="overflow-y: auto; height: calc(100vh - 70px - 2rem)">
                 <h3 class="ui header">
                   <i class="list alternate outline icon"></i>
                   <div class="content">
                     Details Panel
-                    <div class="sub header">Information about selections appear here</div>
+                    <div class="sub header">Selected Item Information</div>
                   </div>
                 </h3>
-                <div id="detailsList" style="overflow-y: scroll; height: 100vh;"></div>
+                <div id="detailsList"></div>
               </div>
             </div>
           </div>
@@ -277,7 +280,7 @@
     };
 
     function selectConcept(concept_id) {
-      console.log(`selecting concept ${concept_id}`);
+      // console.log(`selecting concept ${concept_id}`);
       selectedConcept = concepts.get(concept_id);
       createTreeChart(selectedConcept);
 
@@ -339,7 +342,7 @@
     }
 
     function handleNodeSelected (nodeInfo) {
-      console.log(nodeInfo);
+      // console.log(nodeInfo);
       d3.select("#detailsList").selectAll("*").remove();
 
       if (nodeInfo.type === "paper") {
