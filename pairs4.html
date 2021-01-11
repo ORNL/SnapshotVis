@@ -193,20 +193,24 @@
             });
             
             linkingEdges.map(e => {
-              linkNode.children.push({
-                name: e.paper,
-                type: 'paper',
-                display_name: papers.get(e.paper).title,
-                metadata: {
-                  concept_1: parentConceptID,
-                  concept_2: currentConceptID,
-                  year: +e.year,
-                  sentence: e.sentence,
-                  count: e.count
-                },
-                children: []
-              });
-              childNode.metadata.papers.push(e.paper);
+              if (papers.has(e.paper)) {
+                linkNode.children.push({
+                  name: e.paper,
+                  type: 'paper',
+                  display_name: papers.get(e.paper).title,
+                  metadata: {
+                    concept_1: parentConceptID,
+                    concept_2: currentConceptID,
+                    year: +e.year,
+                    sentence: e.sentence,
+                    count: e.count
+                  },
+                  children: []
+                });
+                childNode.metadata.papers.push(e.paper);
+              } else {
+                console.log(`Paper with ID ${e.paper} that links concepts ${e.concept_1} and ${e.concept_2} not found in list of papers`);
+              }
             });
             currentNode = childNode;
           }
@@ -490,8 +494,10 @@
       placeholder: "Highlight Concept Path"
     });
 
+    // d3.json('./data/2020/papers_filtered.json')
     d3.json('./data/2020/papers.json')
       .then(paperData => {
+        // d3.json("./data/2020/concepts_filtered.json")
         d3.json("./data/2020/concepts.json")
           .then(conceptData => {
             prepData(conceptData, paperData);
