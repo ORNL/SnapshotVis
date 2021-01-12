@@ -226,6 +226,35 @@
       }));
 
       concepts = new Map(Object.keys(conceptData).map(k => {
+        /*
+        let cleanedPaths = [];
+        conceptData[k].paths.map(p => {
+          if (p.path[0] === conceptData[k].concept_id) {
+            cleanedPaths.push(p.path);
+          } else if (p.path[p.path.length - 1] === conceptData[k].concept_id) {
+            cleanedPaths.push(p.path.reverse());
+          } else {
+            // find index of concept k
+            const kIndex = p.path.findIndex(d => d === conceptData[k].concept_id);
+            // TODO: check how many times concept k appears
+            let kCount = 0;
+            p.path.map(d => d === conceptData[k].concept_id ? kCount++ : null);
+            if (kCount > 1) {
+              console.log(`${conceptData[k].concept_id} path has more than one occurence of root concept`);
+              console.log(p.path);
+              console.log(conceptData[k])
+            }            
+
+            // add head path (reversed)
+            cleanedPaths.push(p.path.slice(0, kIndex).reverse);
+            cleanedPaths.push(p.path.slice(kIndex, p.path.length));
+
+          }
+        });
+
+        console.log(cleanedPaths);
+        conceptData[k].paths = cleanedPaths;
+        */
         conceptData[k].paths.map(path => {
           if (path.path[0] !== conceptData[k].concept_id) {
             path.path.reverse();
@@ -495,7 +524,7 @@
     });
 
     // d3.json('./data/2020/papers_filtered.json')
-    d3.json('./data/2020/papers.json')
+    d3.json('./data/2020/papers_all.json')
       .then(paperData => {
         // d3.json("./data/2020/concepts_filtered.json")
         d3.json("./data/2020/concepts.json")
